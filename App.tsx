@@ -1,20 +1,36 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from "react";
+import { SafeAreaView, StyleSheet } from "react-native";
+import {
+  Provider as PaperProvider,
+  MD3LightTheme,
+  MD3DarkTheme,
+} from "react-native-paper";
+import { Provider as StoreProvider } from "react-redux";
+import { store } from "./src/store/store";
+import Tasks from "./src/screens/Tasks";
 
-export default function App() {
+const theme = {
+  ...MD3DarkTheme,
+  roundness: 8,
+};
+
+const App = () => {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <StoreProvider store={store}>
+      <PaperProvider theme={theme}>
+        <SafeAreaView style={styles.container}>
+          <Tasks />
+        </SafeAreaView>
+      </PaperProvider>
+    </StoreProvider>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#fff",
   },
 });
+
+export default App;
