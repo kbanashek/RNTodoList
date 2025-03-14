@@ -1,16 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Task } from '../types';
+import { useState, useCallback, useEffect } from 'react';
+import { Task } from '../store/types';
 import { todoService } from '../services/todoService';
 import { useNetworkStatus } from './useNetworkStatus';
 
-interface UseTasksState {
+interface TasksState {
   tasks: Task[];
   isLoading: boolean;
   error: Error | null;
 }
 
 export const useTasks = () => {
-  const [state, setState] = useState<UseTasksState>({
+  const [state, setState] = useState<TasksState>({
     tasks: [],
     isLoading: true,
     error: null,
@@ -21,53 +21,96 @@ export const useTasks = () => {
   const loadTasks = useCallback(async () => {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
-      const tasks = await todoService.getTasks();
-      setState(prev => ({ ...prev, tasks, isLoading: false }));
+      const result = await todoService.init();
+      setState({
+        tasks: result.tasks,
+        isLoading: false,
+        error: null,
+      });
     } catch (error) {
-      console.error('Error loading tasks:', error);
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error : new Error('Failed to load tasks'),
         isLoading: false,
+        error: error as Error,
       }));
     }
   }, []);
 
-  useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
-
   const addTask = useCallback(async (title: string) => {
     try {
       const result = await todoService.addTask(title);
-      setState(prev => ({ ...prev, tasks: result.tasks }));
+      setState(prev => ({
+        ...prev,
+        tasks: result.tasks,
+        error: null,
+      }));
     } catch (error) {
-      console.error('Error adding task:', error);
+      setState(prev => ({
+        ...prev,
+        error: error as Error,
+      }));
       throw error;
     }
   }, []);
 
-  const updateTask = useCallback(async (taskId: string, updates: Partial<Task>) => {
+  const editTask = useCallback(async (taskId: string, updates: Partial<Task>) => {
     try {
-      const result = await todoService.updateTask(taskId, updates);
-      setState(prev => ({ ...prev, tasks: result.tasks }));
+      const result = await todoService.editTask(taskId, updates);
+      setState(prev => ({
+        ...prev,
+        tasks: result.tasks,
+        error: null,
+      }));
     } catch (error) {
-      console.error('Error updating task:', error);
+      setState(prev => ({
+        ...prev,
+        error: error as Error,
+      }));
       throw error;
     }
   }, []);
+
+  const toggleTask = useCallback(async (taskId: string) => {
+    try {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const result = await todoService.editTask(taskId, {
+        completed: !task.completed,
+      });
+
+      setState(prev => ({
+        ...prev,
+        tasks: result.tasks,
+        error: null,
+      }));
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: error as Error,
+      }));
+      throw error;
+    }
+  }, [state.tasks]);
 
   const deleteTask = useCallback(async (taskId: string) => {
     try {
       const result = await todoService.deleteTask(taskId);
-      setState(prev => ({ ...prev, tasks: result.tasks }));
+      setState(prev => ({
+        ...prev,
+        tasks: result.tasks,
+        error: null,
+      }));
     } catch (error) {
-      console.error('Error deleting task:', error);
+      setState(prev => ({
+        ...prev,
+        error: error as Error,
+      }));
       throw error;
     }
   }, []);
 
-  const syncTasks = useCallback(async () => {
+  const retrySync = useCallback(async () => {
     if (!isConnected || !isInternetReachable) {
       throw new Error('No internet connection available');
     }
@@ -79,43 +122,50 @@ export const useTasks = () => {
         ...prev,
         tasks: result.tasks,
         isLoading: false,
+        error: null,
       }));
     } catch (error) {
-      console.error('Error syncing tasks:', error);
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error : new Error('Failed to sync tasks'),
         isLoading: false,
+        error: error as Error,
       }));
       throw error;
     }
   }, [isConnected, isInternetReachable]);
 
-  const reload = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
-      const result = await todoService.init();
-      setState(prev => ({
-        ...prev,
-        tasks: result.tasks,
-        isLoading: false,
-      }));
-    } catch (error) {
-      console.error('Error reloading tasks:', error);
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error : new Error('Failed to reload tasks'),
-        isLoading: false,
-      }));
-    }
-  }, []);
+  // Initial load
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
+
+  // Background sync when online
+  useEffect(() => {
+    if (!isConnected || !isInternetReachable) return;
+
+    const syncInterval = setInterval(() => {
+      todoService.syncTasks().then(result => {
+        setState(prev => ({
+          ...prev,
+          tasks: result.tasks,
+          error: null,
+        }));
+      }).catch(error => {
+        console.warn('Background sync failed:', error);
+      });
+    }, 30000);
+
+    return () => clearInterval(syncInterval);
+  }, [isConnected, isInternetReachable]);
 
   return {
-    ...state,
+    tasks: state.tasks,
+    isLoading: state.isLoading,
+    error: state.error,
     addTask,
-    updateTask,
+    editTask,
+    toggleTask,
     deleteTask,
-    syncTasks,
-    reload,
+    retrySync,
   };
 };

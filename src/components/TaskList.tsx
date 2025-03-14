@@ -23,7 +23,7 @@ export const TaskList: React.FC<TaskListProps> = ({
   onEdit,
   onRetry,
 }) => {
-  if (isLoading) {
+  if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -35,7 +35,9 @@ export const TaskList: React.FC<TaskListProps> = ({
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Error: {error.message}</Text>
+        <Text style={styles.errorText}>
+          {error.message || 'Failed to load tasks'}
+        </Text>
         <Button title="Retry" onPress={onRetry} style={styles.retryButton} />
       </View>
     );
@@ -71,14 +73,24 @@ export const TaskList: React.FC<TaskListProps> = ({
         (pendingTasks.length > 0 || errorTasks.length > 0) ? (
           <View style={styles.statusContainer}>
             {pendingTasks.length > 0 && (
-              <Text style={styles.pendingText}>
-                {pendingTasks.length} task{pendingTasks.length !== 1 ? 's' : ''} pending sync
-              </Text>
+              <View style={styles.statusRow}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.syncingText}>
+                  {pendingTasks.length} task{pendingTasks.length !== 1 ? 's' : ''} saving...
+                </Text>
+              </View>
             )}
             {errorTasks.length > 0 && (
-              <Text style={styles.errorStatusText}>
-                {errorTasks.length} task{errorTasks.length !== 1 ? 's' : ''} failed to sync
-              </Text>
+              <View style={styles.statusRow}>
+                <Text style={styles.errorStatusText}>
+                  {errorTasks.length} task{errorTasks.length !== 1 ? 's' : ''} failed to save
+                </Text>
+                <Button 
+                  title="Retry" 
+                  onPress={onRetry} 
+                  style={styles.retryButtonSmall}
+                />
+              </View>
             )}
           </View>
         ) : null
@@ -96,7 +108,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 32, 
+    paddingBottom: 32,
   },
   loadingText: {
     marginTop: 16,
@@ -123,6 +135,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
     marginTop: 16,
   },
+  retryButtonSmall: {
+    backgroundColor: '#4CAF50',
+    marginLeft: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
   separator: {
     height: 8,
   },
@@ -134,13 +152,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  pendingText: {
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  syncingText: {
     fontSize: 14,
     color: '#007AFF',
-    marginBottom: 4,
+    marginLeft: 8,
   },
   errorStatusText: {
     fontSize: 14,
     color: '#FF3B30',
+    flex: 1,
   },
 });

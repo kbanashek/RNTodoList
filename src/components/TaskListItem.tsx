@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ViewStyle } from 'react-native';
 import { Task } from '../store/types';
+import { Button } from './Button';
 
 interface TaskListItemProps {
   task: Task;
@@ -15,83 +16,89 @@ export const TaskListItem: React.FC<TaskListItemProps> = ({
   onDelete,
   onEdit,
 }) => {
-  const getSyncStatusColor = () => {
-    switch (task.syncStatus) {
-      case 'pending':
-        return '#007AFF';
-      case 'error':
-        return '#FF3B30';
-      default:
-        return '#34C759';
-    }
+  const isPending = task.syncStatus === 'pending';
+  const isError = task.syncStatus === 'error';
+  const showSyncIndicator = isPending || isError;
+
+  const handleToggle = () => {
+    if (!isPending) onToggle(task.id);
   };
 
-  const getSyncStatusText = () => {
-    switch (task.syncStatus) {
-      case 'pending':
-        return 'Saving...';
-      case 'error':
-        return 'Failed to save';
-      default:
-        return 'Saved';
-    }
+  const handleDelete = () => {
+    if (!isPending) onDelete(task.id);
   };
+
+  const handleEdit = () => {
+    if (!isPending) onEdit(task);
+  };
+
+  const getEditButtonStyle = (): ViewStyle => ({
+    ...styles.editButton,
+    ...(isError ? styles.editButtonError : {}),
+  });
 
   return (
-    <View style={[styles.container, task.syncStatus === 'error' && styles.errorContainer]}>
-      <TouchableOpacity
-        style={styles.toggleButton}
-        onPress={() => onToggle(task.id)}
-        disabled={task.syncStatus === 'pending'}
-      >
-        <View style={[
-          styles.checkbox,
-          task.completed && styles.checkboxChecked,
-          task.syncStatus === 'pending' && styles.checkboxDisabled,
-        ]}>
-          {task.syncStatus === 'pending' && (
-            <ActivityIndicator size="small" color="#007AFF" style={styles.spinner} />
-          )}
-        </View>
-      </TouchableOpacity>
-
+    <View style={[styles.container, isError && styles.errorContainer]}>
       <TouchableOpacity
         style={styles.content}
-        onPress={() => onEdit(task)}
-        disabled={task.syncStatus === 'pending'}
+        onPress={handleToggle}
+        disabled={isPending}
       >
-        <Text
-          style={[
-            styles.title,
-            task.completed && styles.titleCompleted,
-            task.syncStatus === 'pending' && styles.titlePending,
-          ]}
-          numberOfLines={2}
-        >
-          {task.title}
-        </Text>
-        <View style={styles.statusContainer}>
-          <Text style={[styles.syncStatus, { color: getSyncStatusColor() }]}>
-            {getSyncStatusText()}
+        <View style={styles.checkboxContainer}>
+          <View style={[
+            styles.checkbox,
+            task.completed && styles.checkboxChecked,
+            isPending && styles.checkboxDisabled,
+          ]}>
+            {task.completed && !isPending && <Text style={styles.checkmark}>✓</Text>}
+            {isPending && <ActivityIndicator size="small" color="#999" />}
+          </View>
+        </View>
+        <View style={styles.textContainer}>
+          <Text
+            style={[
+              styles.title,
+              task.completed && styles.titleCompleted,
+              isPending && styles.titlePending,
+            ]}
+            numberOfLines={2}
+          >
+            {task.title}
           </Text>
-          {task.syncStatus === 'error' && task.error && (
-            <Text style={styles.errorText} numberOfLines={1}>
-              {task.error}
-            </Text>
+          {showSyncIndicator && (
+            <View style={styles.statusContainer}>
+              {isPending ? (
+                <View style={styles.statusRow}>
+                  <Text style={styles.savingText}>Saving changes...</Text>
+                </View>
+              ) : isError ? (
+                <View style={styles.statusRow}>
+                  <Text style={styles.errorText}>Failed to save - </Text>
+                  <TouchableOpacity onPress={handleEdit}>
+                    <Text style={styles.retryText}>Tap to retry</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+            </View>
           )}
         </View>
       </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.deleteButton,
-          task.syncStatus === 'pending' && styles.deleteButtonDisabled
-        ]}
-        onPress={() => onDelete(task.id)}
-        disabled={task.syncStatus === 'pending'}
-      >
-        <Text style={styles.deleteText}>Delete</Text>
-      </TouchableOpacity>
+      <View style={styles.actions}>
+        {!isPending && (
+          <>
+            <Button
+              title="Edit"
+              onPress={handleEdit}
+              style={getEditButtonStyle()}
+            />
+            <Button
+              title="Delete"
+              onPress={handleDelete}
+              style={styles.deleteButton}
+            />
+          </>
+        )}
+      </View>
     </View>
   );
 };
@@ -113,8 +120,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FF3B30',
   },
-  toggleButton: {
-    padding: 4,
+  content: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxContainer: {
+    marginRight: 12,
   },
   checkbox: {
     width: 24,
@@ -127,23 +139,22 @@ const styles = StyleSheet.create({
   },
   checkboxChecked: {
     backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
   },
   checkboxDisabled: {
     borderColor: '#999',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f0f0f0',
   },
-  spinner: {
-    marginTop: -8,
+  checkmark: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  content: {
+  textContainer: {
     flex: 1,
-    marginHorizontal: 12,
   },
   title: {
     fontSize: 16,
     color: '#333',
-    marginBottom: 4,
   },
   titleCompleted: {
     textDecorationLine: 'line-through',
@@ -153,30 +164,41 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   statusContainer: {
+    marginTop: 4,
+  },
+  statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  syncStatus: {
+  savingText: {
     fontSize: 12,
-    fontWeight: '500',
+    color: '#007AFF',
   },
   errorText: {
     fontSize: 12,
     color: '#FF3B30',
-    marginLeft: 8,
   },
-  deleteButton: {
+  retryText: {
+    fontSize: 12,
+    color: '#007AFF',
+    textDecorationLine: 'underline',
+  },
+  actions: {
+    flexDirection: 'row',
+    marginLeft: 12,
+  },
+  editButton: {
+    backgroundColor: '#007AFF',
+    marginRight: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
+  },
+  editButtonError: {
+    backgroundColor: '#4CAF50',
+  },
+  deleteButton: {
     backgroundColor: '#FF3B30',
-    borderRadius: 4,
-  },
-  deleteButtonDisabled: {
-    backgroundColor: '#999',
-  },
-  deleteText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
 });
