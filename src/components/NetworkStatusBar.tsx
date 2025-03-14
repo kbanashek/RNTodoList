@@ -1,66 +1,121 @@
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useAppSelector } from '../store';
 import { todoService } from '../services/todoService';
+import { PendingChange } from '../store/types';
 
 export const NetworkStatusBar: React.FC = () => {
-  const { isConnected, connectionType, isInternetReachable } = useNetworkStatus();
-  const { syncStatus } = useAppSelector(state => state.network);
-  const pendingChanges = todoService.getPendingChanges();
+  const { isConnected, isInternetReachable, connectionType } = useAppSelector(state => state.network);
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
 
-  const handleRetry = useCallback(async () => {
-    if (isConnected && isInternetReachable) {
-      await todoService.syncTasks();
-    }
-  }, [isConnected, isInternetReachable]);
+  useEffect(() => {
+    const loadPendingChanges = async () => {
+      try {
+        const changes = await todoService.getPendingChanges();
+        setPendingChanges(changes);
+      } catch (error) {
+        console.error('Error loading pending changes:', error);
+      }
+    };
 
-  if (isConnected && isInternetReachable && syncStatus === 'synced' && pendingChanges.length === 0) {
-    return null;
-  }
+    loadPendingChanges();
+    const interval = setInterval(loadPendingChanges, 3000); // Check every 3 seconds per memory
 
-  const getBgColor = () => {
-    if (!isConnected) return '#ff6b6b';
-    if (!isInternetReachable) return '#ffd93d';
-    if (syncStatus === 'error') return '#ff6b6b';
-    if (syncStatus === 'pending') return '#4dabf7';
-    return '#51cf66';
-  };
+    return () => clearInterval(interval);
+  }, []);
 
-  const getMessage = () => {
+  const getStatusMessage = () => {
     if (!isConnected) {
-      return 'Offline - Changes will sync when connection is restored';
+      return {
+        text: 'Offline Mode - Changes saved locally',
+        style: styles.offlineText,
+        containerStyle: styles.offlineContainer,
+      };
     }
+
     if (!isInternetReachable) {
-      return `Connected to ${connectionType || 'network'} but no internet access`;
+      return {
+        text: `Limited connectivity (${connectionType}) - Local changes only`,
+        style: styles.warningText,
+        containerStyle: styles.warningContainer,
+      };
     }
-    if (syncStatus === 'error') {
-      return 'Sync failed - Tap to retry';
+
+    if (pendingChanges.length > 0) {
+      const errorChanges = pendingChanges.filter(change => change.error);
+      if (errorChanges.length > 0) {
+        return {
+          text: `Sync Error - ${errorChanges.length} change${errorChanges.length === 1 ? '' : 's'} failed`,
+          style: styles.errorText,
+          containerStyle: styles.errorContainer,
+        };
+      }
+      return {
+        text: `Syncing ${pendingChanges.length} change${pendingChanges.length === 1 ? '' : 's'}...`,
+        style: styles.syncingText,
+        containerStyle: styles.syncingContainer,
+      };
     }
-    if (syncStatus === 'pending' || pendingChanges.length > 0) {
-      return `Syncing ${pendingChanges.length} changes...`;
-    }
-    return '';
+
+    return {
+      text: `Connected (${connectionType}) - All changes synced`,
+      style: styles.onlineText,
+      containerStyle: styles.onlineContainer,
+    };
   };
+
+  const status = getStatusMessage();
 
   return (
-    <TouchableOpacity 
-      style={[styles.container, { backgroundColor: getBgColor() }]}
-      onPress={syncStatus === 'error' ? handleRetry : undefined}
-      disabled={syncStatus !== 'error'}
-    >
-      <Text style={styles.text}>{getMessage()}</Text>
-    </TouchableOpacity>
+    <View style={[styles.container, status.containerStyle]}>
+      <Text style={[styles.text, status.style]} numberOfLines={1}>
+        {status.text}
+      </Text>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   text: {
-    color: '#fff',
     fontSize: 14,
-    textAlign: 'center',
+    fontWeight: '600',
+  },
+  offlineContainer: {
+    backgroundColor: '#FF3B30',
+  },
+  offlineText: {
+    color: '#FFFFFF',
+  },
+  warningContainer: {
+    backgroundColor: '#FF9500',
+  },
+  warningText: {
+    color: '#FFFFFF',
+  },
+  syncingContainer: {
+    backgroundColor: '#007AFF',
+  },
+  syncingText: {
+    color: '#FFFFFF',
+  },
+  onlineContainer: {
+    backgroundColor: '#34C759',
+  },
+  onlineText: {
+    color: '#FFFFFF',
+  },
+  errorContainer: {
+    backgroundColor: '#FF2D55',
+  },
+  errorText: {
+    color: '#FFFFFF',
   },
 });

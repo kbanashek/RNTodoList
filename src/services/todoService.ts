@@ -3,26 +3,21 @@ import {
   Task,
   PendingChange,
   TodoServiceResult,
-  SyncStatus,
-  ApiTodoResponse,
-} from "../types/index";
+  AddChange,
+  UpdateChange,
+  DeleteChange,
+} from "../store/types";
 
 // Type guards
-function isAddChange(
-  change: PendingChange
-): change is PendingChange & { type: "add" } {
+function isAddChange(change: PendingChange): change is AddChange {
   return change.type === "add";
 }
 
-function isUpdateChange(
-  change: PendingChange
-): change is PendingChange & { type: "update" } {
+function isUpdateChange(change: PendingChange): change is UpdateChange {
   return change.type === "update";
 }
 
-function isDeleteChange(
-  change: PendingChange
-): change is PendingChange & { type: "delete" } {
+function isDeleteChange(change: PendingChange): change is DeleteChange {
   return change.type === "delete";
 }
 
@@ -30,346 +25,422 @@ class TodoService {
   private tasks: Task[] = [];
   private pendingChanges: PendingChange[] = [];
   private readonly STORAGE_KEY = "@todo_list";
-  private readonly BASE_URL = "https://dummyjson.com/todos";
   private readonly PENDING_CHANGES_KEY = "@pending_changes";
-
   private readonly API_CONFIG = {
     userId: 20,
     limit: 10,
     maxRetries: 3,
     baseRetryDelay: 1000, // 1 second
+    baseUrl: "https://dummyjson.com/todos",
   } as const;
+  private initialized: boolean = false;
 
-  constructor() {
-    this.loadFromStorage().catch((error) => {
-      console.error("Error in constructor loading from storage:", error);
-      // Initialize with empty arrays if loading fails
+  private async initialize() {
+    if (this.initialized) return;
+    try {
+      await this.loadFromStorage();
+      this.initialized = true;
+    } catch (error) {
+      console.error("Error initializing TodoService:", error);
       this.tasks = [];
       this.pendingChanges = [];
-    });
+      this.initialized = true;
+    }
   }
 
-  private async loadFromStorage() {
+  private async loadFromStorage(): Promise<void> {
     try {
-      const data = await AsyncStorage.getItem(this.STORAGE_KEY);
-      if (data) {
-        const { tasks, pendingChanges } = JSON.parse(data);
-        this.tasks = tasks || [];
-        this.pendingChanges = pendingChanges || [];
-      }
+      const [tasksJson, changesJson] = await Promise.all([
+        AsyncStorage.getItem(this.STORAGE_KEY),
+        AsyncStorage.getItem(this.PENDING_CHANGES_KEY),
+      ]);
+
+      this.tasks = tasksJson ? JSON.parse(tasksJson) : [];
+      this.pendingChanges = changesJson ? JSON.parse(changesJson) : [];
     } catch (error) {
       console.error("Error loading from storage:", error);
-      throw error; // Re-throw to be caught by constructor
+      this.tasks = [];
+      this.pendingChanges = [];
     }
   }
 
-  private async saveToStorage() {
+  private async saveToStorage(): Promise<void> {
     try {
-      await AsyncStorage.setItem(
-        this.STORAGE_KEY,
-        JSON.stringify({
-          tasks: this.tasks,
-          pendingChanges: this.pendingChanges,
-        })
-      );
+      await Promise.all([
+        AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.tasks)),
+        AsyncStorage.setItem(
+          this.PENDING_CHANGES_KEY,
+          JSON.stringify(this.pendingChanges)
+        ),
+      ]);
     } catch (error) {
       console.error("Error saving to storage:", error);
+      throw error;
     }
   }
 
-  public getTasks(): Task[] {
-    return this.tasks || [];
+  public async getTasks(): Promise<Task[]> {
+    await this.initialize();
+    return this.tasks;
   }
 
-  public getPendingChanges(): PendingChange[] {
-    return this.pendingChanges || [];
+  public async getPendingChanges(): Promise<PendingChange[]> {
+    await this.initialize();
+    return this.pendingChanges;
   }
 
   private generateId(prefix: string): string {
-    return `${prefix}_${Date.now().toString()}`;
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   }
 
   public async init(): Promise<TodoServiceResult> {
-    await this.loadFromStorage();
-    await this.fetchTasksFromApi();
-    return {
-      tasks: this.tasks,
-      pendingChanges: this.pendingChanges,
-    };
-  }
-
-  private async fetchTasksFromApi() {
     try {
-      const url = `${this.BASE_URL}/user/${this.API_CONFIG.userId}?limit=${this.API_CONFIG.limit}`;
-      console.log("Fetching tasks from API:", url);
-
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch tasks");
-      const data: ApiTodoResponse = await response.json();
-      const apiTasks: Task[] = data.todos.map((todo) => ({
-        id: todo.id.toString(),
-        title: todo.todo,
-        completed: todo.completed,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        syncStatus: "synced" as SyncStatus,
-      }));
-
-      // Merge API tasks with local tasks, prioritizing local changes
-      const mergedTasks = [...apiTasks];
-      this.tasks.forEach((localTask) => {
-        if (!mergedTasks.find((t) => t.id === localTask.id)) {
-          mergedTasks.push(localTask);
-        }
-      });
-
-      this.tasks = mergedTasks;
-      await this.saveOfflineData();
+      await this.initialize();
+      await this.fetchTasksFromApi();
+      return {
+        tasks: this.tasks,
+        pendingChanges: this.pendingChanges,
+      };
     } catch (error) {
-      console.error("Error fetching tasks:", error);
-      // Keep using offline data on error
+      console.error("Error initializing TodoService:", error);
+      throw error;
     }
   }
 
-  private async saveOfflineData() {
-    await Promise.all([
-      AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.tasks)),
-      AsyncStorage.setItem(
-        this.PENDING_CHANGES_KEY,
-        JSON.stringify(this.pendingChanges)
-      ),
-    ]);
+  private async fetchTasksFromApi(): Promise<void> {
+    try {
+      const url = `${this.API_CONFIG.baseUrl}?limit=${this.API_CONFIG.limit}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch tasks");
+      const data = await response.json();
+      const apiTasks: Task[] = data.todos.map(
+        (todo: { id: number; todo: string; completed: boolean }) => ({
+          id: `server_${todo.id}`,
+          title: todo.todo,
+          completed: todo.completed,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          syncStatus: "synced",
+        })
+      );
+      this.tasks = [
+        ...apiTasks,
+        ...this.tasks.filter((t) => !t.id.startsWith("server_")),
+      ];
+      await this.saveToStorage();
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      throw error;
+    }
   }
 
   public async addTask(title: string): Promise<TodoServiceResult> {
-    const now = new Date().toISOString();
-    const taskId = this.generateId("local");
-    const newTask: Task = {
-      id: taskId,
-      title,
-      completed: false,
-      createdAt: now,
-      updatedAt: now,
-      syncStatus: "pending",
-    };
+    try {
+      await this.initialize();
+      const now = new Date().toISOString();
+      const taskId = this.generateId("local");
 
-    const pendingChange: PendingChange = {
-      id: this.generateId("change"),
-      type: "add",
-      data: {
-        todo: title,
+      // Create task with pending status for proper sync state
+      const newTask: Task = {
+        id: taskId,
+        title,
         completed: false,
-        userId: 1,
-      },
-      timestamp: new Date().toISOString(),
-      retryCount: 0,
-    };
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: "pending", // Show sync state to user
+      };
 
-    this.tasks = [...(this.tasks || []), newTask];
-    this.pendingChanges = [...(this.pendingChanges || []), pendingChange];
-    await this.saveToStorage();
+      // Ensure tasks is always an array
+      if (!Array.isArray(this.tasks)) {
+        this.tasks = [];
+      }
 
-    return {
-      tasks: this.tasks,
-      pendingChanges: this.pendingChanges,
-    };
+      // Add task to local storage
+      this.tasks.push(newTask);
+
+      // Queue change for later sync
+      const pendingChange: AddChange = {
+        id: this.generateId("change"),
+        type: "add",
+        entityId: taskId,
+        data: {
+          todo: title,
+          completed: false,
+          userId: this.API_CONFIG.userId,
+        },
+        timestamp: now,
+        retryCount: 0,
+      };
+
+      if (!Array.isArray(this.pendingChanges)) {
+        this.pendingChanges = [];
+      }
+
+      this.pendingChanges.push(pendingChange);
+      await this.saveToStorage();
+
+      return {
+        tasks: this.tasks,
+        pendingChanges: this.pendingChanges,
+      };
+    } catch (error) {
+      console.error("Error adding task:", error);
+      throw error;
+    }
   }
 
   public async updateTask(
     taskId: string,
     updates: Partial<Task>
   ): Promise<TodoServiceResult> {
-    if (!this.tasks) this.tasks = [];
-    const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
-    if (taskIndex === -1) throw new Error("Task not found");
+    try {
+      await this.initialize();
 
-    const task = this.tasks[taskIndex];
-    const updatedTask: Task = {
-      ...task,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-      syncStatus: "pending",
-    };
+      // Find task in local storage
+      const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
+      if (taskIndex === -1) throw new Error("Task not found");
 
-    const pendingChange: PendingChange = {
-      id: this.generateId("change"),
-      type: "update",
-      entityId: taskId,
-      data: {
-        todo: updatedTask.title,
-        completed: updatedTask.completed,
-        userId: 1,
-      },
-      timestamp: new Date().toISOString(),
-      retryCount: 0,
-    };
+      const task = this.tasks[taskIndex];
+      const updatedTask: Task = {
+        ...task,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+        syncStatus: "pending",
+      };
 
-    this.tasks[taskIndex] = updatedTask;
-    if (!this.pendingChanges) this.pendingChanges = [];
-    this.pendingChanges.push(pendingChange);
-    await this.saveToStorage();
+      // Update task in local storage
+      this.tasks[taskIndex] = updatedTask;
 
-    return {
-      tasks: this.tasks,
-      pendingChanges: this.pendingChanges,
-    };
+      // Queue change for later sync
+      const pendingChange: UpdateChange = {
+        id: this.generateId("change"),
+        type: "update",
+        entityId: taskId,
+        data: {
+          todo: updatedTask.title,
+          completed: updatedTask.completed,
+          userId: this.API_CONFIG.userId,
+        },
+        timestamp: new Date().toISOString(),
+        retryCount: 0,
+      };
+
+      this.pendingChanges.push(pendingChange);
+      await this.saveToStorage();
+
+      return {
+        tasks: this.tasks,
+        pendingChanges: this.pendingChanges,
+      };
+    } catch (error) {
+      console.error("Error updating task:", error);
+      throw error;
+    }
   }
 
   public async deleteTask(taskId: string): Promise<TodoServiceResult> {
-    if (!this.tasks) this.tasks = [];
-    const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
-    if (taskIndex === -1) throw new Error("Task not found");
+    try {
+      await this.initialize();
 
-    const pendingChange: PendingChange = {
-      id: this.generateId("change"),
-      type: "delete",
-      entityId: taskId,
-      timestamp: new Date().toISOString(),
-      retryCount: 0,
-      data: undefined,
-    };
+      // Find task in local storage
+      const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
+      if (taskIndex === -1) throw new Error("Task not found");
 
-    this.tasks.splice(taskIndex, 1);
-    if (!this.pendingChanges) this.pendingChanges = [];
-    this.pendingChanges.push(pendingChange);
-    await this.saveToStorage();
+      // Remove task from local storage immediately
+      this.tasks.splice(taskIndex, 1);
 
-    return {
-      tasks: this.tasks,
-      pendingChanges: this.pendingChanges,
-    };
+      // Queue change for later sync
+      const pendingChange: DeleteChange = {
+        id: this.generateId("change"),
+        type: "delete",
+        entityId: taskId,
+        timestamp: new Date().toISOString(),
+        retryCount: 0,
+      };
+
+      this.pendingChanges.push(pendingChange);
+      await this.saveToStorage();
+
+      return {
+        tasks: this.tasks,
+        pendingChanges: this.pendingChanges,
+      };
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      throw error;
+    }
   }
 
   private async processPendingChange(change: PendingChange): Promise<void> {
-    if (!this.tasks) this.tasks = [];
-    if (!this.pendingChanges) this.pendingChanges = [];
-
     try {
       switch (change.type) {
         case "add": {
-          if (!isAddChange(change)) {
-            throw new Error("Invalid add change");
-          }
-          const response = await fetch(this.BASE_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(change.data),
-          });
-          if (!response.ok) throw new Error("Failed to add task");
-          const data = await response.json();
+          if (isAddChange(change)) {
+            const response = await fetch(this.API_CONFIG.baseUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(change.data),
+            });
 
-          // Update local task with server ID
-          const taskIndex = this.tasks.findIndex(
-            (t) => !t.id.startsWith("server_")
-          );
-          if (taskIndex !== -1) {
-            this.tasks[taskIndex] = {
-              ...this.tasks[taskIndex],
-              id: `server_${data.id}`,
-              syncStatus: "synced",
-            };
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(
+                errorData.message || `Failed to add task: ${response.status}`
+              );
+            }
+
+            // Update local task sync status
+            const taskIndex = this.tasks.findIndex(
+              (t) => t.id === change.entityId
+            );
+            if (taskIndex !== -1) {
+              this.tasks[taskIndex] = {
+                ...this.tasks[taskIndex],
+                syncStatus: "synced",
+              };
+            }
           }
           break;
         }
         case "update": {
-          if (!isUpdateChange(change)) {
-            throw new Error("Invalid update change");
-          }
-          const response = await fetch(`${this.BASE_URL}/${change.entityId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(change.data),
-          });
-          if (!response.ok) throw new Error("Failed to update task");
+          if (isUpdateChange(change)) {
+            const response = await fetch(
+              `${this.API_CONFIG.baseUrl}/${change.entityId}`,
+              {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(change.data),
+              }
+            );
 
-          // Update local task sync status
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(
+                errorData.message || `Failed to update task: ${response.status}`
+              );
+            }
+
+            // Update local task sync status
+            const taskIndex = this.tasks.findIndex(
+              (t) => t.id === change.entityId
+            );
+            if (taskIndex !== -1) {
+              this.tasks[taskIndex] = {
+                ...this.tasks[taskIndex],
+                syncStatus: "synced",
+              };
+            }
+          }
+          break;
+        }
+        case "delete": {
+          if (isDeleteChange(change)) {
+            const response = await fetch(
+              `${this.API_CONFIG.baseUrl}/${change.entityId}`,
+              {
+                method: "DELETE",
+              }
+            );
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(
+                errorData.message || `Failed to delete task: ${response.status}`
+              );
+            }
+
+            // Remove task from local state if it still exists
+            this.tasks = this.tasks.filter((t) => t.id !== change.entityId);
+          }
+          break;
+        }
+      }
+
+      // Remove processed change
+      this.pendingChanges = this.pendingChanges.filter(
+        (c) => c.id !== change.id
+      );
+      await this.saveToStorage();
+    } catch (error) {
+      console.error("Error processing pending change:", error);
+
+      const retryDelay =
+        this.API_CONFIG.baseRetryDelay * Math.pow(2, change.retryCount);
+
+      // Update change with error and increment retry count
+      const changeIndex = this.pendingChanges.findIndex(
+        (c) => c.id === change.id
+      );
+      if (changeIndex !== -1) {
+        this.pendingChanges[changeIndex] = {
+          ...change,
+          retryCount: (change.retryCount || 0) + 1,
+          error: error instanceof Error ? error.message : String(error),
+        };
+
+        // Update related task status to error if max retries exceeded
+        if (
+          this.pendingChanges[changeIndex].retryCount >=
+          this.API_CONFIG.maxRetries
+        ) {
           const taskIndex = this.tasks.findIndex(
             (t) => t.id === change.entityId
           );
           if (taskIndex !== -1) {
             this.tasks[taskIndex] = {
               ...this.tasks[taskIndex],
-              syncStatus: "synced",
+              syncStatus: "error",
             };
           }
-          break;
         }
-        case "delete": {
-          if (!isDeleteChange(change)) {
-            throw new Error("Invalid delete change");
-          }
-          const response = await fetch(`${this.BASE_URL}/${change.entityId}`, {
-            method: "DELETE",
-          });
-          if (!response.ok) throw new Error("Failed to delete task");
-          break;
-        }
+
+        await this.saveToStorage();
       }
 
-      // Remove processed change
-      const changeIndex = this.pendingChanges.findIndex(
-        (c) => c.id === change.id
-      );
-      if (changeIndex !== -1) {
-        this.pendingChanges.splice(changeIndex, 1);
-      }
-      await this.saveToStorage();
-    } catch (error) {
-      console.error("Error processing change:", error);
-      change.retryCount++;
-      change.lastRetry = new Date().toISOString();
-      change.error = error instanceof Error ? error.message : "Unknown error";
-
-      // Update affected task's sync status
-      if ("entityId" in change) {
-        const taskIndex = this.tasks.findIndex((t) => t.id === change.entityId);
-        if (taskIndex !== -1) {
-          this.tasks[taskIndex] = {
-            ...this.tasks[taskIndex],
-            syncStatus: "error",
-          };
-        }
-      }
-      await this.saveToStorage();
       throw error;
     }
   }
 
   public async syncTasks(): Promise<TodoServiceResult> {
-    if (!this.pendingChanges) this.pendingChanges = [];
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 1000; // 1 second
+    try {
+      await this.initialize();
 
-    for (const change of [...this.pendingChanges]) {
-      if (change.retryCount >= MAX_RETRIES) {
-        console.error(`Max retries reached for change ${change.id}`);
-        continue;
-      }
+      // Process pending changes in order
+      const sortedChanges = [...this.pendingChanges].sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
 
-      try {
-        await this.processPendingChange(change);
-      } catch (error) {
-        if (change.retryCount < MAX_RETRIES) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, RETRY_DELAY * Math.pow(2, change.retryCount))
-          );
-          continue;
+      for (const change of sortedChanges) {
+        try {
+          await this.processPendingChange(change);
+        } catch (error) {
+          console.error(`Error processing change ${change.id}:`, error);
+          // Continue with next change even if this one failed
         }
       }
-    }
 
-    return {
-      tasks: this.tasks,
-      pendingChanges: this.pendingChanges,
-    };
+      return {
+        tasks: this.tasks,
+        pendingChanges: this.pendingChanges,
+      };
+    } catch (error) {
+      console.error("Error syncing tasks:", error);
+      throw error;
+    }
   }
 
   public async clearStorage(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(this.STORAGE_KEY);
+      await Promise.all([
+        AsyncStorage.removeItem(this.STORAGE_KEY),
+        AsyncStorage.removeItem(this.PENDING_CHANGES_KEY),
+      ]);
+
+      // Reset in-memory state
       this.tasks = [];
       this.pendingChanges = [];
-      console.log("Storage cleared successfully");
+      this.initialized = false;
     } catch (error) {
       console.error("Error clearing storage:", error);
       throw error;

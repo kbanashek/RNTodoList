@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
 import * as Network from "expo-network";
-import { useNetworkStatus } from "../hooks/useServiceCheck";
+import { useNetworkStatus } from "../hooks/useNetworkStatus";
 
 const NetworkTester: React.FC = () => {
   const theme = useTheme();
@@ -48,8 +48,9 @@ const NetworkTester: React.FC = () => {
         <View>
           <Text variant="titleMedium">Network Status</Text>
           <Text>Connected: {networkStatus.isConnected ? "✓" : "✗"}</Text>
-          <Text>Type: {networkStatus.type}</Text>
+          <Text>Type: {networkStatus.connectionType}</Text>
           <Text>Internet: {networkStatus.isInternetReachable ? "✓" : "✗"}</Text>
+          <Text variant="bodySmall">Last Check: {new Date(networkStatus.lastCheckTimestamp).toLocaleTimeString()}</Text>
         </View>
         <View style={styles.buttons}>
           <Button
@@ -59,13 +60,13 @@ const NetworkTester: React.FC = () => {
           >
             Offline
           </Button>
-          {/* <Button 
+          <Button 
             mode="contained-tonal"
             onPress={simulateOnlineNoInternet}
             style={styles.button}
           >
             No Internet
-          </Button> */}
+          </Button>
           <Button
             mode="contained-tonal"
             onPress={simulateOnline}
@@ -83,12 +84,13 @@ const styles = StyleSheet.create({
   container: {
     padding: 12,
     margin: 12,
+    marginTop: 0,
     borderRadius: 8,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   buttons: {
     gap: 8,

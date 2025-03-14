@@ -1,58 +1,64 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+  ActivityIndicator,
+} from 'react-native';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  disabled?: boolean;
   style?: ViewStyle;
-  textStyle?: TextStyle;
+  disabled?: boolean;
+  loading?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
-  disabled = false,
   style,
-  textStyle,
+  disabled = false,
+  loading = false,
 }) => {
   return (
     <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled}
       style={[
         styles.button,
         style,
         disabled && styles.disabled,
       ]}
+      onPress={onPress}
+      disabled={disabled || loading}
+      activeOpacity={0.7}
     >
-      <Text style={[styles.text, textStyle, disabled && styles.disabledText]}>
-        {title}
-      </Text>
+      {loading ? (
+        <ActivityIndicator color="#fff" size="small" />
+      ) : (
+        <Text style={styles.text}>{title}</Text>
+      )}
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    height: 44,
     borderRadius: 8,
+    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 16,
   },
   disabled: {
-    backgroundColor: '#A8A8A8',
-    opacity: 0.6,
+    opacity: 0.5,
   },
   text: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  disabledText: {
-    color: '#FFFFFF',
-    opacity: 0.8,
+    textAlign: 'center',
   },
 });

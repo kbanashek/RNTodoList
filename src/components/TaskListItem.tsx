@@ -1,13 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Task } from '../types/index';
-import { Button } from './Button';
-import { useAppSelector } from '../store';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Task } from '../store/types';
 
 interface TaskListItemProps {
   task: Task;
-  onToggle: (taskId: string) => Promise<void>;
-  onDelete: (taskId: string) => Promise<void>;
+  onToggle: (taskId: string) => void;
+  onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
 }
 
@@ -17,97 +15,106 @@ export const TaskListItem: React.FC<TaskListItemProps> = ({
   onDelete,
   onEdit,
 }) => {
-  const { isConnected } = useAppSelector(state => state.network);
-
-  const getSyncIndicator = () => {
-    if (!isConnected) {
-      return {
-        style: styles.offlineIndicator,
-        text: 'Offline',
-      };
-    }
-    switch (task?.syncStatus) {
+  const getSyncStatusColor = () => {
+    switch (task.syncStatus) {
       case 'pending':
-        return {
-          style: styles.syncIndicator,
-          text: 'Syncing...',
-        };
+        return '#007AFF';
       case 'error':
-        return {
-          style: styles.errorIndicator,
-          text: task.error || 'Sync failed',
-        };
+        return '#FF3B30';
       default:
-        return null;
+        return '#34C759';
     }
   };
 
-  const syncIndicator = getSyncIndicator();
-
-  if (!task?.id || !task?.title) {
-    return null;
-  }
+  const getSyncStatusText = () => {
+    switch (task.syncStatus) {
+      case 'pending':
+        return 'Saving...';
+      case 'error':
+        return 'Failed to save';
+      default:
+        return 'Saved';
+    }
+  };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, task.syncStatus === 'error' && styles.errorContainer]}>
       <TouchableOpacity
-        style={styles.taskContent}
+        style={styles.toggleButton}
         onPress={() => onToggle(task.id)}
+        disabled={task.syncStatus === 'pending'}
       >
-        <View style={[styles.checkbox, task.completed && styles.checked]} />
-        <View style={styles.textContainer}>
-          <Text 
-            style={[styles.title, task.completed && styles.completedTitle]}
-            numberOfLines={2}
-          >
-            {String(task.title)}
+        <View style={[
+          styles.checkbox,
+          task.completed && styles.checkboxChecked,
+          task.syncStatus === 'pending' && styles.checkboxDisabled,
+        ]}>
+          {task.syncStatus === 'pending' && (
+            <ActivityIndicator size="small" color="#007AFF" style={styles.spinner} />
+          )}
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.content}
+        onPress={() => onEdit(task)}
+        disabled={task.syncStatus === 'pending'}
+      >
+        <Text
+          style={[
+            styles.title,
+            task.completed && styles.titleCompleted,
+            task.syncStatus === 'pending' && styles.titlePending,
+          ]}
+          numberOfLines={2}
+        >
+          {task.title}
+        </Text>
+        <View style={styles.statusContainer}>
+          <Text style={[styles.syncStatus, { color: getSyncStatusColor() }]}>
+            {getSyncStatusText()}
           </Text>
-          {task.error && (
+          {task.syncStatus === 'error' && task.error && (
             <Text style={styles.errorText} numberOfLines={1}>
-              {String(task.error)}
+              {task.error}
             </Text>
           )}
         </View>
       </TouchableOpacity>
-      <View style={styles.actions}>
-        <Button
-          title="Edit"
-          onPress={() => onEdit(task)}
-          style={styles.editButton}
-          disabled={task.syncStatus === 'pending'}
-        />
-        <Button
-          title="Delete"
-          onPress={() => onDelete(task.id)}
-          style={styles.deleteButton}
-          disabled={task.syncStatus === 'pending'}
-        />
-      </View>
-      {syncIndicator && (
-        <View style={syncIndicator.style}>
-          <Text style={styles.indicatorText}>{syncIndicator.text}</Text>
-        </View>
-      )}
+
+      <TouchableOpacity
+        style={[
+          styles.deleteButton,
+          task.syncStatus === 'pending' && styles.deleteButtonDisabled
+        ]}
+        onPress={() => onDelete(task.id)}
+        disabled={task.syncStatus === 'pending'}
+      >
+        <Text style={styles.deleteText}>Delete</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  taskContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  errorContainer: {
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+  },
+  toggleButton: {
+    padding: 4,
   },
   checkbox: {
     width: 24,
@@ -115,67 +122,61 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#007AFF',
-    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  checked: {
+  checkboxChecked: {
     backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
   },
-  textContainer: {
+  checkboxDisabled: {
+    borderColor: '#999',
+    backgroundColor: '#f5f5f5',
+  },
+  spinner: {
+    marginTop: -8,
+  },
+  content: {
     flex: 1,
+    marginHorizontal: 12,
   },
   title: {
     fontSize: 16,
     color: '#333',
+    marginBottom: 4,
   },
-  completedTitle: {
+  titleCompleted: {
     textDecorationLine: 'line-through',
     color: '#999',
+  },
+  titlePending: {
+    color: '#999',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  syncStatus: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   errorText: {
     fontSize: 12,
     color: '#FF3B30',
-    marginTop: 4,
-  },
-  actions: {
-    flexDirection: 'row',
-    marginTop: 8,
-    gap: 8,
-  },
-  editButton: {
-    backgroundColor: '#4CAF50',
+    marginLeft: 8,
   },
   deleteButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     backgroundColor: '#FF3B30',
+    borderRadius: 4,
   },
-  syncIndicator: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#4dabf7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+  deleteButtonDisabled: {
+    backgroundColor: '#999',
   },
-  offlineIndicator: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#868e96',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  errorIndicator: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  indicatorText: {
+  deleteText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

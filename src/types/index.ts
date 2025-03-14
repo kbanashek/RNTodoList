@@ -1,5 +1,5 @@
 // Task Types
-export type SyncStatus = 'synced' | 'pending' | 'error';
+export type SyncStatus = "synced" | "pending" | "error";
 
 export interface Task {
   id: string;
@@ -8,78 +8,50 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
-  error?: string;
-}
-
-// API Types
-export interface ApiTodoRequest {
-  todo: string;
-  completed: boolean;
-  userId: number;
-}
-
-export interface ApiTodo {
-  id: number;
-  todo: string;
-  completed: boolean;
-  userId: number;
-}
-
-export interface ApiTodoResponse {
-  todos: ApiTodo[];
-  total: number;
-  skip: number;
-  limit: number;
 }
 
 // Sync Types
-export interface BasePendingChange {
+export interface PendingChange {
   id: string;
+  type: "update" | "delete";
+  entityId?: string;
+  data?: {
+    todo: string;
+    completed: boolean;
+    userId: number;
+  };
   timestamp: string;
   retryCount: number;
   lastRetry?: string;
   error?: string;
 }
 
-export interface AddPendingChange extends BasePendingChange {
-  type: 'add';
-  data: ApiTodoRequest;
+// Service Types
+export interface TodoServiceResult {
+  tasks: Task[];
+  pendingChanges: PendingChange[];
 }
 
-export interface UpdatePendingChange extends BasePendingChange {
-  type: 'update';
-  entityId: string;
-  data: ApiTodoRequest;
+export interface UseTasksState {
+  tasks: Task[];
+  pendingChanges: PendingChange[];
+  isLoading: boolean;
+  error: Error | null;
 }
-
-export interface DeletePendingChange extends BasePendingChange {
-  type: 'delete';
-  entityId: string;
-  data?: never;
-}
-
-export type PendingChange = AddPendingChange | UpdatePendingChange | DeletePendingChange;
 
 // Network Types
 export interface NetworkState {
   isConnected: boolean;
-  isInternetReachable: boolean | null;
   connectionType: string | null;
-  syncStatus: SyncStatus;
-  lastChecked: string;
+  isInternetReachable: boolean | null;
+  lastChecked: string | null;
 }
 
 // Storage Types
 export interface OfflineState {
-  tasks: Task[];
+  syncStatus: SyncStatus;
+  lastSync: string | null;
   pendingChanges: PendingChange[];
-  lastSynced: string | null;
-  syncError: string | null;
   isInitialSync: boolean;
-}
-
-export interface TodoServiceResult {
-  tasks: Task[];
-  pendingChanges: PendingChange[];
-  error?: string;
+  error: Error | null;
 }
