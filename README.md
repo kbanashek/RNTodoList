@@ -5,6 +5,7 @@ A React Native todo list application built with offline-first architecture, prov
 ## Features
 
 ### Offline-First Architecture
+
 - **Local Storage**: Tasks are saved locally using AsyncStorage
 - **Background Sync**: Changes sync automatically when online
 - **Optimistic Updates**: UI updates immediately, syncs in background
@@ -17,12 +18,14 @@ A React Native todo list application built with offline-first architecture, prov
   5. Preserve local changes on conflicts
 
 ### Task Management
+
 - **Create Tasks**: Add new tasks that appear at the top of the list
 - **Edit Tasks**: Modify task titles and completion status
 - **Delete Tasks**: Remove tasks with proper sync handling
 - **Task Ordering**: Latest tasks appear first
 
 ### Network Status Detection
+
 - **Connection Types**: Detects WiFi, cellular, or no connection
 - **Internet Reachability**: Checks actual internet connectivity
 - **Status Updates**: Real-time status changes using Expo Network API
@@ -37,6 +40,7 @@ A React Native todo list application built with offline-first architecture, prov
   - Green: Fully online
 
 ### Task Sync Status
+
 - **Real-Time Updates**: Immediate status feedback
 - **Status Types**:
   - Online - All changes synced
@@ -46,6 +50,7 @@ A React Native todo list application built with offline-first architecture, prov
   - Sync Error - Number of failed tasks
 
 ### Error Handling & Recovery
+
 - **Retry Logic**:
   - Exponential backoff (1s base delay)
   - Configurable max retries (default: 3)
@@ -68,44 +73,90 @@ A React Native todo list application built with offline-first architecture, prov
 
 ## Running the App
 
+### Development Setup
+
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
-2. Start the development server:
+2. Install Expo Go:
+   - iOS: [Download from App Store](https://apps.apple.com/app/apple-store/id982107779)
+   - Android: [Download from Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
+
+### Running on Expo Go
+
+1. Start the development server:
+
    ```bash
-   npm start
+   npx expo start
    ```
 
-3. Run on iOS:
-   ```bash
-   npm run ios
-   ```
+2. Connect your device:
 
-   Or Android:
-   ```bash
-   npm run android
-   ```
+   - Scan the QR code with your device's camera
+   - iOS: Use the Camera app
+   - Android: Use the Expo Go app
+   - Or press 'i' for iOS simulator / 'a' for Android emulator
+
+3. Development Options:
+   - Press 'r' to reload the app
+   - Press 'm' to toggle the menu
+   - Press 'w' to open in web browser
+   - Press 'j' to open debugger
+
+### Development Notes
+
+1. **Offline Storage**:
+
+   - Changes persist between app restarts
+   - Uses AsyncStorage for local data
+   - To clear data: uninstall and reinstall app
+   - Or clear app data in device settings
+
+2. **Network Testing**:
+
+   - Enable Airplane Mode to test offline mode
+   - Use Network Link Conditioner for poor connectivity
+   - Check sync status in NetworkStatusBar
+   - Monitor console logs for sync events
+
+3. **Development Tips**:
+
+   - Watch NetworkStatusBar for state changes
+   - Check task sync status indicators
+   - Monitor pending changes queue
+   - Test error recovery scenarios
+
+4. **Debugging**:
+   - Enable Remote JS Debugging for logs
+   - Use React DevTools for component inspection
+   - Check AsyncStorage data in debugger
+   - Monitor network requests in debugger
 
 ## Testing Offline Functionality
 
 1. **Add Tasks While Online**:
+
    - Add several tasks to see them sync
    - Notice the "Online - All changes synced" status
 
 2. **Test Offline Mode**:
+
    - Enable Airplane Mode on your device
    - Add/edit/delete tasks
    - Notice "Offline Mode" status
    - Changes are saved locally
 
 3. **Restore Connection**:
+
    - Disable Airplane Mode
    - Watch tasks sync automatically
    - Status changes to "Syncing" then "Online"
 
 4. **Test Limited Connectivity**:
+
    - Connect to a network without internet
    - Notice "Limited Connectivity" status
    - Changes still save locally
@@ -119,6 +170,7 @@ A React Native todo list application built with offline-first architecture, prov
 ## Technical Implementation
 
 ### Type System
+
 - **Core Types**:
   - `Task`: Todo item with sync status
   - `NetworkStatus`: Enum for connection states
@@ -131,30 +183,33 @@ A React Native todo list application built with offline-first architecture, prov
   - Interface-based contracts
 
 ### Architecture
+
 - **React Native**: Cross-platform mobile support
 - **Expo Network API**: Reliable network status detection
 - **AsyncStorage**: Reliable local data persistence
 - **Queue System**: Robust change tracking and sync
 
 ### Components
-- **NetworkStatusBar**: 
+
+- **NetworkStatusBar**:
   - Network and sync status display
   - Priority-based status messages
   - Visual state indicators
-- **TaskList**: 
+- **TaskList**:
   - Ordered task display
   - Sync status integration
   - Error state handling
-- **AddTaskForm**: 
+- **AddTaskForm**:
   - Task creation
   - Offline support
   - Immediate feedback
-- **TaskListItem**: 
+- **TaskListItem**:
   - Individual task display
   - Sync status indicators
   - Error state handling
 
 ### Data Synchronization
+
 - **Change Queue**:
   - Ordered by timestamp
   - Preserves operation order

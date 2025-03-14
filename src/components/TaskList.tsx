@@ -1,46 +1,38 @@
-import React from 'react';
-import { View, FlatList, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { Task } from '../store/types';
-import { TaskListItem } from './TaskListItem';
-import { Button } from './Button';
+import React from "react";
+import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import { Task } from "../store/types";
+import { TaskListItem } from "./TaskListItem";
 
 interface TaskListProps {
   tasks: Task[];
   isLoading: boolean;
   error: Error | null;
-  onToggle: (taskId: string) => void;
-  onDelete: (taskId: string) => void;
-  onEdit: (task: Task) => void;
-  onRetry: () => void;
+  onToggleComplete: (taskId: string, completed: boolean) => void;
+  onDeleteTask: (taskId: string) => void;
+  onEditTask: (taskId: string, title: string) => void;
 }
 
-export const TaskList: React.FC<TaskListProps> = ({
+export function TaskList({
   tasks,
   isLoading,
   error,
-  onToggle,
-  onDelete,
-  onEdit,
-  onRetry,
-}) => {
-  // Sort tasks by creation date, newest first
-  const sortedTasks = [...tasks].sort((a, b) => {
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
-
+  onToggleComplete,
+  onDeleteTask,
+  onEditTask,
+}: TaskListProps) {
   const renderItem = ({ item }: { item: Task }) => (
     <TaskListItem
       task={item}
-      onToggle={() => onToggle(item.id)}
-      onDelete={() => onDelete(item.id)}
-      onEdit={() => onEdit(item)}
+      onToggleComplete={onToggleComplete}
+      onDeleteTask={onDeleteTask}
+      onEditTask={onEditTask}
     />
   );
 
   if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" />
         <Text style={styles.loadingText}>Loading tasks...</Text>
       </View>
     );
@@ -49,134 +41,63 @@ export const TaskList: React.FC<TaskListProps> = ({
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>
-          {error.message || 'Failed to load tasks'}
-        </Text>
-        <Button title="Retry" onPress={onRetry} style={styles.retryButton} />
+        <Text style={styles.errorText}>Error: {error.message}</Text>
       </View>
     );
   }
-
-  if (tasks.length === 0) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>No tasks yet</Text>
-        <Text style={styles.emptySubtext}>Add a task to get started</Text>
-      </View>
-    );
-  }
-
-  const pendingTasks = tasks.filter(task => task.syncStatus === 'pending');
-  const errorTasks = tasks.filter(task => task.syncStatus === 'error');
 
   return (
-    <FlatList
-      data={sortedTasks}
-      keyExtractor={item => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={styles.listContent}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-      ListHeaderComponent={
-        (pendingTasks.length > 0 || errorTasks.length > 0) ? (
-          <View style={styles.statusContainer}>
-            {pendingTasks.length > 0 && (
-              <View style={styles.statusRow}>
-                <ActivityIndicator size="small" color="#007AFF" />
-                <Text style={styles.syncingText}>
-                  {pendingTasks.length} task{pendingTasks.length !== 1 ? 's' : ''} saving...
-                </Text>
-              </View>
-            )}
-            {errorTasks.length > 0 && (
-              <View style={styles.statusRow}>
-                <Text style={styles.errorStatusText}>
-                  {errorTasks.length} task{errorTasks.length !== 1 ? 's' : ''} failed to save
-                </Text>
-                <Button 
-                  title="Retry" 
-                  onPress={onRetry} 
-                  style={styles.retryButtonSmall}
-                />
-              </View>
-            )}
-          </View>
-        ) : null
-      }
-      ListEmptyComponent={
-        <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>No tasks yet. Add one to get started!</Text>
+    <View style={styles.container}>
+      {isLoading && (
+        <View style={styles.refreshIndicator}>
+          <ActivityIndicator size="small" />
+          <Text style={styles.refreshText}>Refreshing...</Text>
         </View>
-      }
-    />
+      )}
+      <FlatList
+        data={tasks}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+      />
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
+    justifyContent: "center",
+    alignItems: "center",
   },
   listContent: {
-    padding: 16,
-    paddingBottom: 32,
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   loadingText: {
-    marginTop: 16,
+    marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   errorText: {
+    color: "#d32f2f",
     fontSize: 16,
-    color: '#FF3B30',
-    textAlign: 'center',
-    marginBottom: 16,
+    textAlign: "center",
+    margin: 20,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+  refreshIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 10,
+    backgroundColor: "#f5f5f5",
   },
-  emptySubtext: {
+  refreshText: {
+    marginLeft: 10,
+    color: "#666",
     fontSize: 14,
-    color: '#666',
-  },
-  retryButton: {
-    backgroundColor: '#4CAF50',
-    marginTop: 16,
-  },
-  retryButtonSmall: {
-    backgroundColor: '#4CAF50',
-    marginLeft: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  separator: {
-    height: 8,
-  },
-  statusContainer: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  syncingText: {
-    fontSize: 14,
-    color: '#007AFF',
-    marginLeft: 8,
-  },
-  errorStatusText: {
-    fontSize: 14,
-    color: '#FF3B30',
-    flex: 1,
   },
 });

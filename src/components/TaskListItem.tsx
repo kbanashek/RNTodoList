@@ -1,204 +1,176 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ViewStyle } from 'react-native';
-import { Task } from '../store/types';
-import { Button } from './Button';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
+import { Task } from "../store/types";
+import { Checkbox } from "./Checkbox";
 
 interface TaskListItemProps {
   task: Task;
-  onToggle: (taskId: string) => void;
-  onDelete: (taskId: string) => void;
-  onEdit: (task: Task) => void;
+  onToggleComplete: (taskId: string, completed: boolean) => void;
+  onDeleteTask: (taskId: string) => void;
+  onEditTask: (taskId: string, title: string) => void;
 }
 
-export const TaskListItem: React.FC<TaskListItemProps> = ({
+export function TaskListItem({
   task,
-  onToggle,
-  onDelete,
-  onEdit,
-}) => {
-  const isPending = task.syncStatus === 'pending';
-  const isError = task.syncStatus === 'error';
-  const showSyncIndicator = isPending || isError;
+  onToggleComplete,
+  onDeleteTask,
+  onEditTask,
+}: TaskListItemProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
 
-  const handleToggle = () => {
-    if (!isPending) onToggle(task.id);
+  const handleSubmitEdit = () => {
+    if (editedTitle.trim() !== "") {
+      onEditTask(task.id, editedTitle.trim());
+      setIsEditing(false);
+    }
   };
 
-  const handleDelete = () => {
-    if (!isPending) onDelete(task.id);
+  const handleCancelEdit = () => {
+    setEditedTitle(task.title);
+    setIsEditing(false);
   };
-
-  const handleEdit = () => {
-    if (!isPending) onEdit(task);
-  };
-
-  const getEditButtonStyle = (): ViewStyle => ({
-    ...styles.editButton,
-    ...(isError ? styles.editButtonError : {}),
-  });
 
   return (
-    <View style={[styles.container, isError && styles.errorContainer]}>
-      <TouchableOpacity
-        style={styles.content}
-        onPress={handleToggle}
-        disabled={isPending}
-      >
-        <View style={styles.checkboxContainer}>
-          <View style={[
-            styles.checkbox,
-            task.completed && styles.checkboxChecked,
-            isPending && styles.checkboxDisabled,
-          ]}>
-            {task.completed && !isPending && <Text style={styles.checkmark}>✓</Text>}
-            {isPending && <ActivityIndicator size="small" color="#999" />}
-          </View>
-        </View>
-        <View style={styles.textContainer}>
-          <Text
-            style={[
-              styles.title,
-              task.completed && styles.titleCompleted,
-              isPending && styles.titlePending,
-            ]}
-            numberOfLines={2}
-          >
-            {task.title}
-          </Text>
-          {showSyncIndicator && (
-            <View style={styles.statusContainer}>
-              {isPending ? (
-                <View style={styles.statusRow}>
-                  <Text style={styles.savingText}>Saving changes...</Text>
-                </View>
-              ) : isError ? (
-                <View style={styles.statusRow}>
-                  <Text style={styles.errorText}>Failed to save - </Text>
-                  <TouchableOpacity onPress={handleEdit}>
-                    <Text style={styles.retryText}>Tap to retry</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
+    <View style={styles.container}>
+      <View style={styles.row}>
+        <Checkbox
+          value={task.completed}
+          onValueChange={(value: boolean) => onToggleComplete(task.id, value)}
+        />
+        {isEditing ? (
+          <View style={styles.editContainer}>
+            <TextInput
+              style={styles.input}
+              value={editedTitle}
+              onChangeText={setEditedTitle}
+              autoFocus
+              onSubmitEditing={handleSubmitEdit}
+              onBlur={handleCancelEdit}
+            />
+            <View style={styles.editButtons}>
+              <TouchableOpacity
+                onPress={handleSubmitEdit}
+                style={[styles.button, styles.saveButton]}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleCancelEdit}
+                style={[styles.button, styles.cancelButton]}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </TouchableOpacity>
-      <View style={styles.actions}>
-        {!isPending && (
-          <>
-            <Button
-              title="Edit"
-              onPress={handleEdit}
-              style={getEditButtonStyle()}
-            />
-            <Button
-              title="Delete"
-              onPress={handleDelete}
+          </View>
+        ) : (
+          <View style={styles.contentContainer}>
+            <TouchableOpacity
+              onPress={() => setIsEditing(true)}
+              style={styles.titleContainer}
+            >
+              <Text
+                style={[
+                  styles.title,
+                  task.completed && styles.completedTitle,
+                ]}
+              >
+                {task.title}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onDeleteTask(task.id)}
               style={styles.deleteButton}
-            />
-          </>
+            >
+              <Text style={styles.deleteText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
     padding: 12,
-    shadowColor: '#000',
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 2,
   },
-  errorContainer: {
-    borderWidth: 1,
-    borderColor: '#FF3B30',
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  content: {
+  contentContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginLeft: 12,
   },
-  checkboxContainer: {
-    marginRight: 12,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#007AFF',
-  },
-  checkboxDisabled: {
-    borderColor: '#999',
-    backgroundColor: '#f0f0f0',
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  textContainer: {
+  titleContainer: {
     flex: 1,
+    marginRight: 8,
   },
   title: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
-  titleCompleted: {
-    textDecorationLine: 'line-through',
-    color: '#999',
+  completedTitle: {
+    textDecorationLine: "line-through",
+    color: "#888",
   },
-  titlePending: {
-    color: '#999',
-  },
-  statusContainer: {
-    marginTop: 4,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  savingText: {
-    fontSize: 12,
-    color: '#007AFF',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#FF3B30',
-  },
-  retryText: {
-    fontSize: 12,
-    color: '#007AFF',
-    textDecorationLine: 'underline',
-  },
-  actions: {
-    flexDirection: 'row',
+  editContainer: {
+    flex: 1,
     marginLeft: 12,
   },
-  editButton: {
-    backgroundColor: '#007AFF',
-    marginRight: 8,
+  input: {
+    fontSize: 16,
+    padding: 8,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  editButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 8,
+  },
+  button: {
     paddingHorizontal: 12,
     paddingVertical: 6,
+    borderRadius: 4,
+    marginLeft: 8,
   },
-  editButtonError: {
-    backgroundColor: '#4CAF50',
+  saveButton: {
+    backgroundColor: "#4CAF50",
+  },
+  cancelButton: {
+    backgroundColor: "#666",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 14,
   },
   deleteButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    padding: 8,
+  },
+  deleteText: {
+    color: "#d32f2f",
+    fontSize: 14,
   },
 });

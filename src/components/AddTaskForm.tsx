@@ -1,42 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
-import { Button } from './Button';
-import { Task } from '../store/types';
+import React, { useState } from 'react';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 interface AddTaskFormProps {
   onSubmit: (title: string) => Promise<void>;
-  editingTask: Task | null;
-  onSaveEdit: (taskId: string, title: string) => Promise<void>;
-  onCancelEdit: () => void;
 }
 
-export const AddTaskForm: React.FC<AddTaskFormProps> = ({
-  onSubmit,
-  editingTask,
-  onSaveEdit,
-  onCancelEdit,
-}) => {
+export function AddTaskForm({ onSubmit }: AddTaskFormProps) {
   const [title, setTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (editingTask) {
-      setTitle(editingTask.title);
-    } else {
-      setTitle('');
-    }
-  }, [editingTask]);
 
   const handleSubmit = async () => {
     if (!title.trim()) return;
 
     try {
       setIsSubmitting(true);
-      if (editingTask) {
-        await onSaveEdit(editingTask.id, title.trim());
-      } else {
-        await onSubmit(title.trim());
-      }
+      await onSubmit(title.trim());
       setTitle('');
     } catch (error) {
       console.error('Error submitting task:', error);
@@ -45,52 +23,31 @@ export const AddTaskForm: React.FC<AddTaskFormProps> = ({
     }
   };
 
-  const handleCancel = () => {
-    setTitle('');
-    onCancelEdit();
-  };
-
   return (
     <View style={styles.container}>
       <TextInput
         style={styles.input}
         value={title}
         onChangeText={setTitle}
-        placeholder={editingTask ? 'Edit task...' : 'Add a new task...'}
+        placeholder="Add a new task..."
         placeholderTextColor="#999"
         returnKeyType="done"
         onSubmitEditing={handleSubmit}
         editable={!isSubmitting}
-        autoFocus={!!editingTask}
       />
-      <View style={styles.buttons}>
-        {editingTask ? (
-          <>
-            <Button
-              title="Cancel"
-              onPress={handleCancel}
-              style={styles.cancelButton}
-              disabled={isSubmitting}
-            />
-            <Button
-              title="Save"
-              onPress={handleSubmit}
-              style={styles.saveButton}
-              disabled={!title.trim() || isSubmitting}
-            />
-          </>
-        ) : (
-          <Button
-            title="Add Task"
-            onPress={handleSubmit}
-            style={styles.addButton}
-            disabled={!title.trim() || isSubmitting}
-          />
-        )}
-      </View>
+      <TouchableOpacity
+        style={[
+          styles.addButton,
+          (!title.trim() || isSubmitting) && styles.addButtonDisabled,
+        ]}
+        onPress={handleSubmit}
+        disabled={!title.trim() || isSubmitting}
+      >
+        <Text style={styles.addButtonText}>Add Task</Text>
+      </TouchableOpacity>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -109,22 +66,19 @@ const styles = StyleSheet.create({
     color: '#333',
     backgroundColor: '#fff',
   },
-  buttons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 12,
-  },
   addButton: {
     backgroundColor: '#4CAF50',
-    minWidth: 100,
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 12,
   },
-  saveButton: {
-    backgroundColor: '#007AFF',
-    minWidth: 100,
+  addButtonDisabled: {
+    backgroundColor: '#ccc',
   },
-  cancelButton: {
-    backgroundColor: '#999',
-    marginRight: 8,
-    minWidth: 100,
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

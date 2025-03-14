@@ -1,61 +1,96 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as Network from "expo-network";
-import { NetworkState } from "../store/types";
+import { NetworkState, NetworkType } from "../store/types";
 
-export const useNetworkStatus = () => {
-  const [networkStatus, setNetworkStatus] = useState<NetworkState>({
-    isConnected: true,
-    isInternetReachable: true,
-    connectionType: Network.NetworkStateType.WIFI,
-    lastCheckTimestamp: new Date().toISOString(),
+const ONLINE_CHECK_INTERVAL = 30000; // 30 seconds
+const OFFLINE_CHECK_INTERVAL = 5000; // 5 seconds
+
+// Map Expo network types to our NetworkType
+function mapNetworkType(type: Network.NetworkStateType): NetworkType {
+  switch (type) {
+    case Network.NetworkStateType.NONE:
+      return "none";
+    case Network.NetworkStateType.CELLULAR:
+      return "cellular";
+    case Network.NetworkStateType.WIFI:
+      return "wifi";
+    case Network.NetworkStateType.BLUETOOTH:
+      return "bluetooth";
+    case Network.NetworkStateType.ETHERNET:
+      return "ethernet";
+    case Network.NetworkStateType.VPN:
+      return "vpn";
+    case Network.NetworkStateType.OTHER:
+      return "other";
+    default:
+      return "unknown";
+  }
+}
+
+export function useNetworkStatus() {
+  const [networkState, setNetworkState] = useState<NetworkState>({
+    isConnected: false, // Default to false for offline-first approach
+    isInternetReachable: false,
+    type: "none",
+    lastChecked: new Date().toISOString(),
   });
 
+  const checkNetworkStatus = useCallback(async () => {
+    try {
+      const networkState = await Network.getNetworkStateAsync();
+      setNetworkState({
+        isConnected: networkState.isConnected,
+        isInternetReachable: networkState.isInternetReachable ?? false,
+        type: mapNetworkType(networkState.type),
+        lastChecked: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error checking network status:", error);
+      setNetworkState(prev => ({
+        ...prev,
+        isConnected: false,
+        isInternetReachable: false,
+        type: "none",
+        lastChecked: new Date().toISOString(),
+      }));
+    }
+  }, []);
+
+  // Initial check on mount
+  useEffect(() => {
+    checkNetworkStatus();
+  }, [checkNetworkStatus]);
+
+  // Polling effect
   useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
-    const checkNetworkStatus = async () => {
-      try {
-        const networkState = await Network.getNetworkStateAsync();
+    const checkWithBackoff = async () => {
+      if (!mounted) return;
 
-        // console.log('Network check:', {
-        //   isConnected: networkState.isConnected,
-        //   isInternetReachable: networkState.isInternetReachable,
-        //   type: networkState.type
-        // });
+      await checkNetworkStatus();
 
-        if (mounted) {
-          setNetworkStatus((prev) => ({
-            ...prev,
-            isConnected: networkState.isConnected,
-            isInternetReachable: networkState.isInternetReachable ?? false,
-            connectionType: networkState.type,
-            lastCheckTimestamp: new Date().toISOString(),
-          }));
-        }
-      } catch (error) {
-        console.error("Error checking network status:", error);
-        if (mounted) {
-          setNetworkStatus((prev) => ({
-            ...prev,
-            isConnected: false,
-            isInternetReachable: false,
-            lastCheckTimestamp: new Date().toISOString(),
-          }));
-        }
-      }
+      // Use shorter polling interval when offline
+      const interval = networkState.isConnected && networkState.isInternetReachable
+        ? ONLINE_CHECK_INTERVAL
+        : OFFLINE_CHECK_INTERVAL;
+
+      timeoutId = setTimeout(checkWithBackoff, interval);
     };
 
-    // Initial check
-    checkNetworkStatus();
-
-    // Check every 3 seconds per memory
-    const networkInterval = setInterval(checkNetworkStatus, 3000);
+    // Start polling
+    timeoutId = setTimeout(checkWithBackoff, networkState.isConnected ? ONLINE_CHECK_INTERVAL : OFFLINE_CHECK_INTERVAL);
 
     return () => {
       mounted = false;
-      clearInterval(networkInterval);
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, []);
+  }, [checkNetworkStatus, networkState.isConnected, networkState.isInternetReachable]);
 
-  return networkStatus;
-};
+  return {
+    ...networkState,
+    checkNetworkStatus,
+    isOffline: !networkState.isConnected || !networkState.isInternetReachable,
+  };
+}

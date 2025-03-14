@@ -11,14 +11,18 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kbanashek.RNTodoList",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSNetworkCheckEnabled": true,
-        "UIBackgroundModes": ["fetch"]
+        "UIBackgroundModes": [
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -27,14 +31,19 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.kbanashek.RNTodoList",
-      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"]
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "owner": "kbanashek",
     "extra": {
-      "eas": {}
+      "eas": {
+        "projectId": "69cf826f-0c8c-4366-a0ca-328b7e133ac2"
+      }
     }
   }
 }
