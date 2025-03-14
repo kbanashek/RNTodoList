@@ -1,3 +1,4 @@
+// Task Types
 export type SyncStatus = 'synced' | 'pending' | 'error';
 
 export interface Task {
@@ -7,39 +8,78 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
+  error?: string;
 }
 
-export interface NetworkState {
-  isConnected: boolean;
-  type: 'wifi' | 'cellular' | 'none';
-  isInternetReachable: boolean | null;
-  lastChecked?: number;
-}
-
+// API Types
 export interface ApiTodoRequest {
   todo: string;
   completed: boolean;
   userId: number;
 }
 
-export interface PendingChange<T = ApiTodoRequest> {
+export interface ApiTodo {
+  id: number;
+  todo: string;
+  completed: boolean;
+  userId: number;
+}
+
+export interface ApiTodoResponse {
+  todos: ApiTodo[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+// Sync Types
+export interface BasePendingChange {
   id: string;
-  type: 'add' | 'update' | 'delete';
-  entityId?: string;
-  data?: T;
-  timestamp: number;
+  timestamp: string;
   retryCount: number;
-  lastRetry?: number;
+  lastRetry?: string;
   error?: string;
 }
 
+export interface AddPendingChange extends BasePendingChange {
+  type: 'add';
+  data: ApiTodoRequest;
+}
+
+export interface UpdatePendingChange extends BasePendingChange {
+  type: 'update';
+  entityId: string;
+  data: ApiTodoRequest;
+}
+
+export interface DeletePendingChange extends BasePendingChange {
+  type: 'delete';
+  entityId: string;
+  data?: never;
+}
+
+export type PendingChange = AddPendingChange | UpdatePendingChange | DeletePendingChange;
+
+// Network Types
+export interface NetworkState {
+  isConnected: boolean;
+  isInternetReachable: boolean | null;
+  connectionType: string | null;
+  syncStatus: SyncStatus;
+  lastChecked: string;
+}
+
+// Storage Types
 export interface OfflineState {
-  lastSyncTimestamp: number;
+  tasks: Task[];
   pendingChanges: PendingChange[];
+  lastSynced: string | null;
+  syncError: string | null;
   isInitialSync: boolean;
-  syncErrors: {
-    changeId: string;
-    error: string;
-    timestamp: number;
-  }[];
+}
+
+export interface TodoServiceResult {
+  tasks: Task[];
+  pendingChanges: PendingChange[];
+  error?: string;
 }

@@ -1,46 +1,58 @@
 import React from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
-import { ActivityIndicator } from 'react-native-paper';
+import { View, FlatList, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import { Task } from '@types';
-import TaskListItem from './TaskListItem';
-import { useNetworkStatus } from '../hooks/useServiceCheck';
+import { TaskListItem } from './TaskListItem';
 
 interface TaskListProps {
   tasks: Task[];
-  isLoading: boolean;
-  isOffline: boolean;
-  onToggleComplete: (taskId: string, completed: boolean) => void;
-  onDeleteTask: (taskId: string) => void;
-  onEditTask: (taskId: string, updates: Partial<Task>) => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onToggleTask: (taskId: string) => Promise<void>;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => Promise<void>;
 }
 
 const TaskList: React.FC<TaskListProps> = ({
   tasks,
   isLoading,
-  isOffline,
-  onToggleComplete,
-  onDeleteTask,
+  error,
+  onToggleTask,
   onEditTask,
+  onDeleteTask,
 }) => {
-  const { type: networkType } = useNetworkStatus();
+  if (isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.emptyText}>No tasks yet</Text>
+        <Text style={styles.emptySubtext}>Add a task to get started</Text>
+      </View>
+    );
+  }
 
   const renderItem = ({ item }: { item: Task }) => (
     <TaskListItem
       task={item}
-      isOffline={isOffline}
-      onToggleComplete={onToggleComplete}
-      onDelete={onDeleteTask}
+      onToggle={onToggleTask}
       onEdit={onEditTask}
+      onDelete={onDeleteTask}
     />
   );
-
-  if (isLoading && !tasks.length) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -48,8 +60,7 @@ const TaskList: React.FC<TaskListProps> = ({
         data={tasks}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        style={styles.list}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         bounces={true}
         removeClippedSubviews={true}
@@ -70,13 +81,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
   },
   list: {
-    flex: 1,
+    padding: 16,
   },
-  content: {
-    flexGrow: 1,
-    paddingVertical: 8,
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
   },
 });
 

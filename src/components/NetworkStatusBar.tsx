@@ -1,64 +1,66 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from "react-native";
-import { useNetworkStatus } from "../hooks/useNetworkStatus";
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useAppSelector } from '../store';
+import { todoService } from '../services/todoService';
 
-interface NetworkStatusBarProps {
-  style?: ViewStyle;
-  onRetry?: () => void;
-}
-
-export const NetworkStatusBar: React.FC<NetworkStatusBarProps> = ({
-  style,
-  onRetry,
-}) => {
+export const NetworkStatusBar: React.FC = () => {
   const { isConnected, connectionType, isInternetReachable } = useNetworkStatus();
+  const { syncStatus } = useAppSelector(state => state.network);
+  const pendingChanges = todoService.getPendingChanges();
 
-  if (isConnected && isInternetReachable) {
+  const handleRetry = useCallback(async () => {
+    if (isConnected && isInternetReachable) {
+      await todoService.syncTasks();
+    }
+  }, [isConnected, isInternetReachable]);
+
+  if (isConnected && isInternetReachable && syncStatus === 'synced' && pendingChanges.length === 0) {
     return null;
   }
 
+  const getBgColor = () => {
+    if (!isConnected) return '#ff6b6b';
+    if (!isInternetReachable) return '#ffd93d';
+    if (syncStatus === 'error') return '#ff6b6b';
+    if (syncStatus === 'pending') return '#4dabf7';
+    return '#51cf66';
+  };
+
+  const getMessage = () => {
+    if (!isConnected) {
+      return 'Offline - Changes will sync when connection is restored';
+    }
+    if (!isInternetReachable) {
+      return `Connected to ${connectionType || 'network'} but no internet access`;
+    }
+    if (syncStatus === 'error') {
+      return 'Sync failed - Tap to retry';
+    }
+    if (syncStatus === 'pending' || pendingChanges.length > 0) {
+      return `Syncing ${pendingChanges.length} changes...`;
+    }
+    return '';
+  };
+
   return (
-    <View style={[styles.container, style]}>
-      <Text style={styles.text}>
-        {!isConnected
-          ? "No network connection"
-          : !isInternetReachable
-          ? `Connected to ${connectionType}, but no internet access`
-          : ""}
-      </Text>
-      {onRetry && (
-        <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+    <TouchableOpacity 
+      style={[styles.container, { backgroundColor: getBgColor() }]}
+      onPress={syncStatus === 'error' ? handleRetry : undefined}
+      disabled={syncStatus !== 'error'}
+    >
+      <Text style={styles.text}>{getMessage()}</Text>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#ff6b6b",
     padding: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
   },
   text: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 14,
-    fontWeight: "500",
-    flex: 1,
-  },
-  retryButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-    marginLeft: 8,
-  },
-  retryText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
+    textAlign: 'center',
   },
 });

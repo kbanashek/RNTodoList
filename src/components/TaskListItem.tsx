@@ -1,177 +1,181 @@
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-} from 'react-native';
-import { Text, Checkbox, IconButton } from 'react-native-paper';
-import { Task } from '@types';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Task } from '../types/index';
+import { Button } from './Button';
+import { useAppSelector } from '../store';
 
 interface TaskListItemProps {
   task: Task;
-  isOffline: boolean;
-  onToggleComplete: (taskId: string, completed: boolean) => void;
-  onDelete: (taskId: string) => void;
-  onEdit: (taskId: string, updates: Partial<Task>) => void;
+  onToggle: (taskId: string) => Promise<void>;
+  onDelete: (taskId: string) => Promise<void>;
+  onEdit: (task: Task) => void;
 }
 
-const TaskListItem: React.FC<TaskListItemProps> = ({
+export const TaskListItem: React.FC<TaskListItemProps> = ({
   task,
-  isOffline,
-  onToggleComplete,
+  onToggle,
   onDelete,
   onEdit,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(task.title);
-  const fadeAnim = useState(new Animated.Value(1))[0];
+  const { isConnected } = useAppSelector(state => state.network);
 
-  const handleStartEditing = useCallback(() => {
-    setEditText(task.title);
-    setIsEditing(true);
-  }, [task.title]);
-
-  const handleCancelEditing = useCallback(() => {
-    setIsEditing(false);
-    setEditText(task.title);
-  }, [task.title]);
-
-  const handleSubmitEditing = useCallback(() => {
-    const trimmedText = editText.trim();
-    if (trimmedText && trimmedText !== task.title) {
-      onEdit(task.id, { title: trimmedText });
+  const getSyncIndicator = () => {
+    if (!isConnected) {
+      return {
+        style: styles.offlineIndicator,
+        text: 'Offline',
+      };
     }
-    setIsEditing(false);
-  }, [editText, task.id, task.title, onEdit]);
+    switch (task?.syncStatus) {
+      case 'pending':
+        return {
+          style: styles.syncIndicator,
+          text: 'Syncing...',
+        };
+      case 'error':
+        return {
+          style: styles.errorIndicator,
+          text: task.error || 'Sync failed',
+        };
+      default:
+        return null;
+    }
+  };
 
-  const handleToggleComplete = useCallback(() => {
-    onToggleComplete(task.id, !task.completed);
-  }, [task.id, task.completed, onToggleComplete]);
+  const syncIndicator = getSyncIndicator();
 
-  const handleDelete = useCallback(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      onDelete(task.id);
-    });
-  }, [fadeAnim, task.id, onDelete]);
+  if (!task?.id || !task?.title) {
+    return null;
+  }
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <View style={styles.content}>
-        <Checkbox
-          status={task.completed ? 'checked' : 'unchecked'}
-          onPress={handleToggleComplete}
-          disabled={isOffline}
-        />
-        {isEditing ? (
-          <TextInput
-            style={styles.input}
-            value={editText}
-            onChangeText={setEditText}
-            onBlur={handleCancelEditing}
-            onSubmitEditing={handleSubmitEditing}
-            autoFocus
-          />
-        ) : (
-          <TouchableOpacity
-            style={styles.textContainer}
-            onPress={handleStartEditing}
-            disabled={isOffline}
+    <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.taskContent}
+        onPress={() => onToggle(task.id)}
+      >
+        <View style={[styles.checkbox, task.completed && styles.checked]} />
+        <View style={styles.textContainer}>
+          <Text 
+            style={[styles.title, task.completed && styles.completedTitle]}
+            numberOfLines={2}
           >
-            <Text
-              style={[
-                styles.text,
-                task.completed && styles.completedText,
-                task.syncStatus === 'pending' && styles.pendingText,
-                task.syncStatus === 'error' && styles.errorText,
-              ]}
-              numberOfLines={2}
-            >
-              {task.title}
+            {String(task.title)}
+          </Text>
+          {task.error && (
+            <Text style={styles.errorText} numberOfLines={1}>
+              {String(task.error)}
             </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          )}
+        </View>
+      </TouchableOpacity>
       <View style={styles.actions}>
-        {task.syncStatus === 'error' && (
-          <IconButton
-            icon="alert-circle"
-            size={20}
-            iconColor="#f44336"
-            onPress={() => {}}
-          />
-        )}
-        {task.syncStatus === 'pending' && (
-          <IconButton
-            icon="clock-outline"
-            size={20}
-            iconColor="#fb8c00"
-            onPress={() => {}}
-          />
-        )}
-        <IconButton
-          icon="delete"
-          size={20}
-          onPress={handleDelete}
-          disabled={isOffline}
+        <Button
+          title="Edit"
+          onPress={() => onEdit(task)}
+          style={styles.editButton}
+          disabled={task.syncStatus === 'pending'}
+        />
+        <Button
+          title="Delete"
+          onPress={() => onDelete(task.id)}
+          style={styles.deleteButton}
+          disabled={task.syncStatus === 'pending'}
         />
       </View>
-    </Animated.View>
+      {syncIndicator && (
+        <View style={syncIndicator.style}>
+          <Text style={styles.indicatorText}>{syncIndicator.text}</Text>
+        </View>
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
     backgroundColor: '#fff',
+    padding: 16,
     borderRadius: 8,
-    marginHorizontal: 16,
-    marginVertical: 4,
-    elevation: 2,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 2,
   },
-  content: {
-    flex: 1,
+  taskContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    marginRight: 12,
+  },
+  checked: {
+    backgroundColor: '#007AFF',
   },
   textContainer: {
     flex: 1,
-    marginLeft: 8,
   },
-  text: {
+  title: {
     fontSize: 16,
+    color: '#333',
   },
-  completedText: {
+  completedTitle: {
     textDecorationLine: 'line-through',
-    color: '#9e9e9e',
-  },
-  pendingText: {
-    color: '#fb8c00',
+    color: '#999',
   },
   errorText: {
-    color: '#f44336',
-  },
-  input: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    padding: 0,
+    fontSize: 12,
+    color: '#FF3B30',
+    marginTop: 4,
   },
   actions: {
     flexDirection: 'row',
-    alignItems: 'center',
+    marginTop: 8,
+    gap: 8,
+  },
+  editButton: {
+    backgroundColor: '#4CAF50',
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+  },
+  syncIndicator: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#4dabf7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  offlineIndicator: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#868e96',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  errorIndicator: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  indicatorText: {
+    color: '#fff',
+    fontSize: 12,
   },
 });
-
-export default TaskListItem;
