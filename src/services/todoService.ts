@@ -1,33 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Task, TodoServiceConfig } from "../store/types";
 
-const SAMPLE_TASKS: Task[] = [
-  {
-    id: "sample_1",
-    title: "Welcome to Todo App! 👋",
-    completed: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "sample_2",
-    title: "✨ Try adding a new task above",
-    completed: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "sample_3",
-    title: "🔄 Works offline - changes sync automatically",
-    completed: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
 export class TodoService {
   private tasks: Task[] = [];
-  private readonly STORAGE_KEY = "tasks";
+  private readonly STORAGE_KEY = "@TodoApp:tasks";
+  private hasLoadedFromStorage = false;
 
   constructor(private readonly API_CONFIG: TodoServiceConfig) {}
 
@@ -37,22 +14,23 @@ export class TodoService {
       
       if (storedTasks) {
         this.tasks = JSON.parse(storedTasks);
-      } else {
-        // Initialize with sample tasks if storage is empty
-        this.tasks = SAMPLE_TASKS;
-        await this.saveToStorage();
+        this.hasLoadedFromStorage = true;
       }
       
       return { tasks: this.tasks };
     } catch (error) {
       console.error("Error initializing tasks:", error);
-      // Return sample tasks as fallback
-      return { tasks: SAMPLE_TASKS };
+      return { tasks: [] };
     }
   }
 
   public async fetchTasks(): Promise<{ tasks: Task[] }> {
     try {
+      // First load local tasks if we haven't already
+      if (!this.hasLoadedFromStorage) {
+        await this.init();
+      }
+
       const response = await fetch(
         `${this.API_CONFIG.baseUrl}/todos/user/${this.API_CONFIG.userId}`
       );
@@ -64,11 +42,11 @@ export class TodoService {
       const data = await response.json();
 
       if (!data || !Array.isArray(data.todos)) {
-        return { tasks: this.tasks };
+        throw new Error("Invalid API response format");
       }
 
       // Map API response to our Task format
-      const tasks = data.todos.map((task: any) => ({
+      const apiTasks = data.todos.map((task: any) => ({
         id: String(task.id),
         title: task.todo,
         completed: task.completed,
@@ -76,16 +54,17 @@ export class TodoService {
         updatedAt: new Date().toISOString(),
       }));
 
-      // Only update if we got tasks from API
-      if (tasks.length > 0) {
-        this.tasks = tasks;
-        await this.saveToStorage();
-      }
+      // Merge API tasks with local tasks
+      // Keep local tasks that have custom IDs (they start with 'task_')
+      const localTasks = this.tasks.filter(task => task.id.startsWith('task_'));
+      this.tasks = [...localTasks, ...apiTasks];
 
+      // Save merged tasks to storage
+      await this.saveToStorage();
       return { tasks: this.tasks };
     } catch (error) {
       console.error("Error fetching tasks:", error);
-      return { tasks: this.tasks };
+      throw error;
     }
   }
 
@@ -175,6 +154,7 @@ export class TodoService {
     try {
       await AsyncStorage.removeItem(this.STORAGE_KEY);
       this.tasks = [];
+      this.hasLoadedFromStorage = false;
     } catch (error) {
       console.error("Error clearing storage:", error);
       throw error;

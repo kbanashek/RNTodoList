@@ -24,14 +24,13 @@ export function useTasks() {
   const loadTasks = useCallback(async () => {
     try {
       // First load from storage
-      const result = await todoService.init();
+      const localResult = await todoService.init();
       setState((prev) => ({
         ...prev,
-        tasks: result.tasks,
-        isLoading: true,
+        tasks: localResult.tasks,
       }));
 
-      // Then fetch from API
+      // Then try to fetch and merge with API data
       const apiResult = await todoService.fetchTasks();
       setState((prev) => ({
         ...prev,

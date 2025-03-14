@@ -123,8 +123,9 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginVertical: 4,
-    backgroundColor: "#1e1e1e",
+    backgroundColor: "#333333",
     elevation: 2,
+    borderRadius: 8,
   },
   content: {
     flexDirection: "row",
