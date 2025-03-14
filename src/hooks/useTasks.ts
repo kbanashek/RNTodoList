@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Task, PendingChange } from '@types';
 import { todoService } from '@services/todoService';
-import { useNetworkStatus } from '@hooks/useServiceCheck';
+import { useNetworkStatus } from './useNetworkStatus';
 
 export const useTasks = () => {
   const { isConnected } = useNetworkStatus();
@@ -103,5 +103,6 @@ export const useTasks = () => {
     updateTask,
     deleteTask,
     syncTasks,
+    loadTasks,
   };
 };

@@ -3,9 +3,9 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { store } from './src/store';
-import Tasks from './src/screens/Tasks';
+import { Tasks } from './src/screens/Tasks';
 
-export default function App() {
+export const App: React.FC = () => {
   return (
     <ReduxProvider store={store}>
       <PaperProvider>
@@ -15,4 +15,6 @@ export default function App() {
       </PaperProvider>
     </ReduxProvider>
   );
-}
+};
+
+export default App;

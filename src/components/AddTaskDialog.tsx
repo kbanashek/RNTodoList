@@ -1,19 +1,40 @@
-import React, { useState } from 'react';
-import { View, TextInput, Modal, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React, { useState } from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 
-interface Props {
+interface AddTaskDialogProps {
   visible: boolean;
-  onAdd: (title: string) => void;
   onClose: () => void;
+  onAdd: (title: string) => Promise<void>;
 }
 
-const AddTaskDialog: React.FC<Props> = ({ visible, onAdd, onClose }) => {
-  const [title, setTitle] = useState('');
+export const AddTaskDialog: React.FC<AddTaskDialogProps> = ({
+  visible,
+  onClose,
+  onAdd,
+}) => {
+  const [title, setTitle] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (title.trim()) {
-      onAdd(title.trim());
-      setTitle('');
+  const handleAdd = async () => {
+    if (!title.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onAdd(title.trim());
+      setTitle("");
+      onClose();
+    } catch (error) {
+      console.error("Failed to add task:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -24,79 +45,97 @@ const AddTaskDialog: React.FC<Props> = ({ visible, onAdd, onClose }) => {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.dialog}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+      >
+        <View style={styles.content}>
           <Text style={styles.title}>Add New Task</Text>
           <TextInput
             style={styles.input}
+            placeholder="Enter task title"
             value={title}
             onChangeText={setTitle}
-            placeholder="Task title"
             autoFocus
-            onSubmitEditing={handleSubmit}
+            onSubmitEditing={handleAdd}
           />
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.button} onPress={onClose}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={onClose}
+            >
               <Text style={styles.buttonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, styles.addButton]}
-              onPress={handleSubmit}
+              style={[
+                styles.button,
+                styles.addButton,
+                (!title.trim() || isSubmitting) && styles.buttonDisabled,
+              ]}
+              onPress={handleAdd}
+              disabled={!title.trim() || isSubmitting}
             >
-              <Text style={[styles.buttonText, styles.addButtonText]}>Add</Text>
+              <Text style={styles.buttonText}>
+                {isSubmitting ? "Adding..." : "Add Task"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    padding: 16,
   },
-  dialog: {
-    backgroundColor: '#fff',
+  content: {
+    backgroundColor: "#fff",
     borderRadius: 8,
-    padding: 20,
-    width: '80%',
-    maxWidth: 400,
+    padding: 16,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: "600",
     marginBottom: 16,
+    textAlign: "center",
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 4,
-    padding: 8,
+    padding: 12,
     marginBottom: 16,
+    fontSize: 16,
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
   },
   button: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 4,
-    marginLeft: 8,
+    minWidth: 80,
+    alignItems: "center",
   },
-  buttonText: {
-    fontSize: 16,
+  cancelButton: {
+    backgroundColor: "#ff6b6b",
   },
   addButton: {
-    backgroundColor: '#666',
+    backgroundColor: "#4CAF50",
   },
-  addButtonText: {
-    color: '#fff',
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
-
-export default AddTaskDialog;

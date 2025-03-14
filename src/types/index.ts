@@ -1,10 +1,12 @@
+export type SyncStatus = 'synced' | 'pending' | 'error';
+
 export interface Task {
   id: string;
   title: string;
   completed: boolean;
   createdAt: string;
   updatedAt: string;
-  syncStatus: 'synced' | 'pending' | 'error';
+  syncStatus: SyncStatus;
 }
 
 export interface NetworkState {
