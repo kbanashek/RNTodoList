@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Button, Text, useTheme } from 'react-native-paper';
-import * as Network from 'expo-network';
-import { useNetworkStatus } from '../hooks/useServiceCheck';
+import React from "react";
+import { View, StyleSheet } from "react-native";
+import { Button, Text, useTheme } from "react-native-paper";
+import * as Network from "expo-network";
+import { useNetworkStatus } from "../hooks/useServiceCheck";
 
 const NetworkTester: React.FC = () => {
   const theme = useTheme();
@@ -38,30 +38,35 @@ const NetworkTester: React.FC = () => {
   if (!__DEV__) return null;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surfaceVariant }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceVariant },
+      ]}
+    >
       <View style={styles.row}>
         <View>
           <Text variant="titleMedium">Network Status</Text>
-          <Text>Connected: {networkStatus.isConnected ? '✓' : '✗'}</Text>
+          <Text>Connected: {networkStatus.isConnected ? "✓" : "✗"}</Text>
           <Text>Type: {networkStatus.type}</Text>
-          <Text>Internet: {networkStatus.isInternetReachable ? '✓' : '✗'}</Text>
+          <Text>Internet: {networkStatus.isInternetReachable ? "✓" : "✗"}</Text>
         </View>
         <View style={styles.buttons}>
-          <Button 
+          <Button
             mode="contained-tonal"
             onPress={simulateOffline}
             style={styles.button}
           >
             Offline
           </Button>
-          <Button 
+          {/* <Button 
             mode="contained-tonal"
             onPress={simulateOnlineNoInternet}
             style={styles.button}
           >
             No Internet
-          </Button>
-          <Button 
+          </Button> */}
+          <Button
             mode="contained-tonal"
             onPress={simulateOnline}
             style={styles.button}
@@ -81,9 +86,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   buttons: {
     gap: 8,

@@ -2,18 +2,28 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "skipLibCheck": true,
+    "allowJs": true,
     "baseUrl": ".",
     "paths": {
-      "*": ["src/*"],
       "@components/*": ["src/components/*"],
       "@store/*": ["src/store/*"],
-      "@screens/*": ["src/screens/*"]
-    }
+      "@screens/*": ["src/screens/*"],
+      "@services/*": ["src/services/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@types": ["src/types"]
+    },
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true
   },
   "include": [
+    "**/*.ts",
+    "**/*.tsx",
     "src/**/*"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules/**/*"
   ]
 }

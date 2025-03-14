@@ -1,322 +1,184 @@
-import React, { useCallback, useEffect, useState, useRef } from "react";
-import {
-  View,
-  StyleSheet,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  Easing,
-} from "react-native";
-import {
-  Button,
-  Text,
-  useTheme,
-  ActivityIndicator,
-  MD3Theme,
-  IconButton,
-  Badge,
-} from "react-native-paper";
-import * as Network from "expo-network";
-import TaskInput from "../components/TaskInput";
-import TaskList from "../components/TaskList";
-import NetworkTester from "../components/NetworkTester";
-import { useTodos } from "../hooks/useTodos";
-import { useNetworkStatus } from "../hooks/useServiceCheck";
-import { todoService } from "../services/todoService";
+import React, { useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTasks } from '@hooks/useTasks';
+import { useNetworkStatus } from '@hooks/useServiceCheck';
+import NetworkStatusBar from '@components/NetworkStatusBar';
+import AddTaskDialog from '@components/AddTaskDialog';
+import { Task } from '@types';
 
 const Tasks: React.FC = () => {
-  const theme = useTheme();
-  const { isLoading, error, refetch } = useTodos();
-  const { isConnected, type, isInternetReachable } = useNetworkStatus();
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState(0);
-  const spinValue = useRef(new Animated.Value(0)).current;
+  const { isConnected } = useNetworkStatus();
+  const {
+    tasks,
+    pendingChanges,
+    isLoading,
+    error,
+    addTask,
+    updateTask,
+    deleteTask,
+    syncTasks,
+  } = useTasks();
+  const [isAddDialogVisible, setAddDialogVisible] = useState(false);
 
-  const startSpinAnimation = useCallback(() => {
-    Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 2000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    ).start();
-  }, [spinValue]);
-
-  const stopSpinAnimation = useCallback(() => {
-    spinValue.stopAnimation();
-    spinValue.setValue(0);
-  }, [spinValue]);
-
-  useEffect(() => {
-    if (isSyncing) {
-      startSpinAnimation();
-    } else {
-      stopSpinAnimation();
-    }
-  }, [isSyncing, startSpinAnimation, stopSpinAnimation]);
-
-  const checkPendingChanges = useCallback(async () => {
-    const changes = await todoService.getPendingChanges();
-    setPendingChanges(changes.length);
-  }, []);
-
-  useEffect(() => {
-    checkPendingChanges();
-  }, [checkPendingChanges]);
-
-  const handleRetry = useCallback(() => {
-    refetch();
-  }, [refetch]);
-
-  const handleSync = useCallback(async () => {
-    if (!isConnected || !isInternetReachable || isSyncing) return;
-    setIsSyncing(true);
+  const handleAddTask = async (title: string) => {
     try {
-      await todoService.syncPendingChanges();
-      await refetch();
-      await checkPendingChanges();
-    } catch (error) {
-      console.error("Error syncing:", error);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [isConnected, isInternetReachable, isSyncing, refetch, checkPendingChanges]);
-
-  useEffect(() => {
-    if (isConnected && isInternetReachable && pendingChanges > 0) {
-      handleSync();
-    }
-  }, [isConnected, isInternetReachable, pendingChanges, handleSync]);
-
-  const getConnectionType = () => {
-    switch (type) {
-      case Network.NetworkStateType.WIFI:
-        return "WiFi";
-      case Network.NetworkStateType.CELLULAR:
-        return "Cellular";
-      case Network.NetworkStateType.BLUETOOTH:
-        return "Bluetooth";
-      case Network.NetworkStateType.ETHERNET:
-        return "Ethernet";
-      case Network.NetworkStateType.VPN:
-        return "VPN";
-      case Network.NetworkStateType.NONE:
-      default:
-        return "No Connection";
+      await addTask({ 
+        title, 
+        completed: false, 
+        syncStatus: 'pending' 
+      });
+      setAddDialogVisible(false);
+    } catch (err) {
+      console.error('Failed to add task:', err);
     }
   };
 
-  const spin = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
-
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text>Loading tasks...</Text>
-        </View>
-      );
+  const handleToggleTask = async (task: Task) => {
+    try {
+      await updateTask(task.id, { completed: !task.completed });
+    } catch (err) {
+      console.error('Failed to toggle task:', err);
     }
+  };
 
-    const renderTasks = () => (
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
-      >
-        <View style={styles.content}>
-          <TaskInput />
-          <TaskList />
-        </View>
-      </KeyboardAvoidingView>
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await deleteTask(taskId);
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+    }
+  };
+
+  const handleSync = async () => {
+    try {
+      await syncTasks();
+    } catch (err) {
+      console.error('Failed to sync tasks:', err);
+    }
+  };
+
+  const renderItem = ({ item }: { item: Task }) => (
+    <View style={styles.taskItem}>
+      <TouchableOpacity
+        style={[styles.checkbox, item.completed && styles.checkboxChecked]}
+        onPress={() => handleToggleTask(item)}
+      />
+      <Text style={[styles.taskText, item.completed && styles.taskTextCompleted]}>
+        {item.title}
+      </Text>
+      <TouchableOpacity onPress={() => handleDeleteTask(item.id)}>
+        <Text style={styles.deleteButton}>×</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading tasks...</Text>
+      </View>
     );
+  }
 
-    if (!isConnected) {
-      return (
-        <>
-          <View
-            style={[
-              styles.banner,
-              { backgroundColor: theme.colors.surfaceVariant },
-            ]}
-          >
-            <Text style={styles.message}>No network connection</Text>
-            <Text style={styles.submessage}>Working in offline mode</Text>
-            <Text style={styles.detail}>
-              {pendingChanges > 0
-                ? `${pendingChanges} change${
-                    pendingChanges === 1 ? "" : "s"
-                  } pending sync`
-                : "Your changes will sync when connection is restored"}
-            </Text>
-          </View>
-          {renderTasks()}
-        </>
-      );
-    }
-
-    if (!isInternetReachable) {
-      return (
-        <>
-          <View
-            style={[
-              styles.banner,
-              { backgroundColor: theme.colors.surfaceVariant },
-            ]}
-          >
-            <Text style={styles.message}>Internet not reachable</Text>
-            <Text style={styles.submessage}>
-              Connected to {getConnectionType()}
-            </Text>
-            <Text style={styles.detail}>Check your internet connection</Text>
-            <Button
-              mode="contained"
-              onPress={handleRetry}
-              style={styles.button}
-              labelStyle={styles.buttonLabel}
-            >
-              Retry
-            </Button>
-          </View>
-          {renderTasks()}
-        </>
-      );
-    }
-
-    if (error) {
-      return (
-        <>
-          <View
-            style={[
-              styles.banner,
-              { backgroundColor: theme.colors.surfaceVariant },
-            ]}
-          >
-            <Text style={styles.message}>Error loading tasks</Text>
-            <Text style={styles.detail}>
-              {error instanceof Error ? error.message : "Unknown error"}
-            </Text>
-            <Button
-              mode="contained"
-              onPress={handleRetry}
-              style={styles.button}
-              labelStyle={styles.buttonLabel}
-            >
-              Retry
-            </Button>
-          </View>
-          {renderTasks()}
-        </>
-      );
-    }
-
-    return renderTasks();
-  };
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
-    >
-      {__DEV__ && <NetworkTester />}
-      <View style={styles.header}>
-        <Text style={styles.title}>Tasks</Text>
-        <View style={styles.headerRight}>
-          {isConnected && isInternetReachable && (
-            <>
-              {pendingChanges > 0 && !isSyncing && (
-                <Badge style={styles.badge}>{pendingChanges}</Badge>
-              )}
-              <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                <IconButton
-                  icon={isSyncing ? "sync" : pendingChanges > 0 ? "sync-alert" : "sync"}
-                  iconColor={theme.colors.primary}
-                  size={24}
-                  onPress={handleSync}
-                  disabled={isSyncing}
-                  style={styles.syncButton}
-                />
-              </Animated.View>
-            </>
-          )}
-        </View>
-      </View>
-      {renderContent()}
-    </SafeAreaView>
+    <View style={styles.container}>
+      <NetworkStatusBar
+        isConnected={isConnected}
+        pendingChanges={pendingChanges}
+        onSync={handleSync}
+      />
+      <FlatList
+        data={tasks}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        style={styles.list}
+      />
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setAddDialogVisible(true)}
+      >
+        <Text style={styles.addButtonText}>+</Text>
+      </TouchableOpacity>
+      <AddTaskDialog
+        visible={isAddDialogVisible}
+        onAdd={handleAddTask}
+        onClose={() => setAddDialogVisible(false)}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  list: {
     flex: 1,
   },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  banner: {
-    padding: 16,
-    alignItems: "center",
-  },
-  header: {
-    padding: 16,
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.1)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    borderBottomColor: '#eee',
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#666',
+    marginRight: 10,
   },
-  title: {
+  checkboxChecked: {
+    backgroundColor: '#666',
+  },
+  taskText: {
+    flex: 1,
+    fontSize: 16,
+  },
+  taskTextCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
+  deleteButton: {
     fontSize: 24,
-    fontWeight: "bold",
+    color: '#ff6b6b',
+    paddingHorizontal: 10,
   },
-  message: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
+  addButton: {
+    position: 'absolute',
+    right: 30,
+    bottom: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#666',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  submessage: {
-    fontSize: 16,
-    marginBottom: 8,
+  addButtonText: {
+    fontSize: 32,
+    color: '#fff',
   },
-  detail: {
-    fontSize: 14,
-    opacity: 0.7,
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  button: {
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  buttonLabel: {
-    fontSize: 16,
-    paddingHorizontal: 8,
-  },
-  syncButton: {
-    margin: 0,
-  },
-  badge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    zIndex: 1,
+  errorText: {
+    color: '#ff6b6b',
+    textAlign: 'center',
+    margin: 20,
   },
 });
 

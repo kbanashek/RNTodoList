@@ -16,7 +16,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.kbanashek.RNTodoList",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSNetworkCheckEnabled": true,
+        "UIBackgroundModes": ["fetch"]
       }
     },
     "android": {
@@ -24,16 +26,15 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.kbanashek.RNTodoList"
+      "package": "com.kbanashek.RNTodoList",
+      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "kbanashek",
     "extra": {
-      "eas": {
-        "projectId": ""
-      }
-    },
-    "owner": "kbanashek"
+      "eas": {}
+    }
   }
 }

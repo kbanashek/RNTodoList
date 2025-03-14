@@ -1,30 +1,27 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Platform, KeyboardAvoidingView } from "react-native";
 import { TextInput, IconButton, useTheme } from "react-native-paper";
-import { useAddTodo } from "../hooks/useTodos";
+import { useTasks } from "../hooks/useTasks";
 import { formatDate } from "../utils/dateFormatter";
 
 const TaskInput: React.FC = () => {
   const theme = useTheme();
   const [text, setText] = useState("");
-  const { mutate: addTodo, isPending } = useAddTodo();
+  const { addTask, isLoading } = useTasks();
 
   const handleSubmit = () => {
     const trimmedText = text.trim();
-    if (trimmedText && !isPending) {
+    if (trimmedText && !isLoading) {
       const tempId = `temp-${Date.now()}-${Math.random()
         .toString(36)
         .substr(2, 9)}`;
       const newTask = {
-        task: {
-          text: trimmedText,
-          completed: false,
-          date: formatDate(new Date()),
-        },
-        tempId,
+        title: trimmedText,
+        completed: false,
+        createdAt: formatDate(new Date()),
       };
 
-      addTodo(newTask);
+      addTask(newTask);
       setText("");
     }
   };
@@ -47,7 +44,7 @@ const TaskInput: React.FC = () => {
           style={[styles.input, { backgroundColor: theme.colors.background }]}
           onSubmitEditing={handleSubmit}
           returnKeyType="done"
-          disabled={isPending}
+          disabled={isLoading}
           autoCapitalize="sentences"
           blurOnSubmit={false}
           maxLength={100}
@@ -56,9 +53,9 @@ const TaskInput: React.FC = () => {
           icon="plus-circle"
           size={24}
           onPress={handleSubmit}
-          disabled={!text.trim() || isPending}
+          disabled={!text.trim() || isLoading}
           iconColor={
-            text.trim() && !isPending
+            text.trim() && !isLoading
               ? theme.colors.primary
               : theme.colors.secondary
           }

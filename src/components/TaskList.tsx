@@ -1,176 +1,64 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { FlatList, StyleSheet, ListRenderItemInfo } from "react-native";
-import TaskListItem from "./TaskListItem";
-import { Task } from "../store/taskSlice";
-import {
-  useUpdateTodo,
-  useDeleteTodo,
-  useToggleTodoComplete,
-  useTodos,
-} from "../hooks/useTodos";
-import { useNetworkStatus } from "../hooks/useServiceCheck";
+import React from 'react';
+import { View, FlatList, StyleSheet } from 'react-native';
+import { ActivityIndicator } from 'react-native-paper';
+import { Task } from '@types';
+import TaskListItem from './TaskListItem';
+import { useNetworkStatus } from '../hooks/useServiceCheck';
 
-interface TaskListItemProps {
-  task: Task;
-  isEditing: boolean;
-  editText: string;
+interface TaskListProps {
+  tasks: Task[];
+  isLoading: boolean;
   isOffline: boolean;
-  onToggleComplete: (task: Task) => void;
+  onToggleComplete: (taskId: string, completed: boolean) => void;
   onDeleteTask: (taskId: string) => void;
-  onEditTask: (task: Task, newText: string) => void;
-  onStartEditing: () => void;
-  onCancelEditing: () => void;
-  onChangeEditText: (text: string) => void;
-  onSubmitEditText: () => void;
+  onEditTask: (taskId: string, updates: Partial<Task>) => void;
 }
 
-const TaskList: React.FC = () => {
-  const { data: tasks = [], refetch } = useTodos();
-  const { mutate: updateTodo } = useUpdateTodo();
-  const { mutate: deleteTodo } = useDeleteTodo();
-  const { mutate: toggleTodo } = useToggleTodoComplete();
-  const { isConnected, isInternetReachable } = useNetworkStatus();
+const TaskList: React.FC<TaskListProps> = ({
+  tasks,
+  isLoading,
+  isOffline,
+  onToggleComplete,
+  onDeleteTask,
+  onEditTask,
+}) => {
+  const { type: networkType } = useNetworkStatus();
 
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [processedTasks, setProcessedTasks] = useState<Task[]>([]);
-
-  useEffect(() => {
-    const seen = new Set<string>();
-    const uniqueTasks = tasks.filter((task: Task) => {
-      if (!task.id) {
-        console.warn("Task found with no ID:", task);
-        return false;
-      }
-      if (seen.has(task.id)) {
-        console.warn("Duplicate task ID found:", task.id, "Task:", task);
-        return false;
-      }
-      seen.add(task.id);
-      return true;
-    });
-
-    const sortedTasks = [...uniqueTasks].sort((a, b) => {
-      const aIsTemp = a.id.startsWith("temp-");
-      const bIsTemp = b.id.startsWith("temp-");
-      if (aIsTemp && !bIsTemp) return -1;
-      if (!aIsTemp && bIsTemp) return 1;
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    });
-
-    if (uniqueTasks.length !== tasks.length) {
-      refetch();
-    }
-
-    setProcessedTasks(sortedTasks);
-  }, [tasks, refetch]);
-
-  const handleToggleComplete = useCallback(
-    (task: Task) => {
-      toggleTodo(task);
-    },
-    [toggleTodo]
+  const renderItem = ({ item }: { item: Task }) => (
+    <TaskListItem
+      task={item}
+      isOffline={isOffline}
+      onToggleComplete={onToggleComplete}
+      onDelete={onDeleteTask}
+      onEdit={onEditTask}
+    />
   );
 
-  const handleDeleteTask = useCallback(
-    (taskId: string) => {
-      if (taskId.startsWith("temp-")) {
-        console.warn("Attempting to delete temporary task:", taskId);
-      }
-      deleteTodo(taskId);
-    },
-    [deleteTodo]
-  );
-
-  const handleStartEditing = useCallback((task: Task) => {
-    setEditText(task.text);
-    setEditingTaskId(task.id);
-  }, []);
-
-  const handleCancelEditing = useCallback(() => {
-    setEditingTaskId(null);
-  }, []);
-
-  const handleEditTask = useCallback(
-    (task: Task, newText: string) => {
-      const trimmedText = newText.trim();
-      if (trimmedText && trimmedText !== task.text) {
-        const updatedTask: Task = {
-          ...task,
-          text: trimmedText,
-        };
-        updateTodo(updatedTask);
-      }
-      setEditingTaskId(null);
-    },
-    [updateTodo]
-  );
-
-  const handleSubmitEdit = useCallback(
-    (task: Task) => {
-      const trimmedText = editText.trim();
-      if (trimmedText && trimmedText !== task.text) {
-        handleEditTask(task, trimmedText);
-      } else {
-        handleCancelEditing();
-      }
-    },
-    [editText, handleEditTask, handleCancelEditing]
-  );
-
-  const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Task>) => (
-      <TaskListItem
-        task={item}
-        onToggleComplete={handleToggleComplete}
-        onDeleteTask={handleDeleteTask}
-        onEditTask={handleEditTask}
-        isOffline={!isConnected || !isInternetReachable}
-        isEditing={editingTaskId === item.id}
-        editText={editText}
-        onStartEditing={() => handleStartEditing(item)}
-        onCancelEditing={handleCancelEditing}
-        onChangeEditText={setEditText}
-        onSubmitEditText={() => handleSubmitEdit(item)}
-      />
-    ),
-    [
-      editingTaskId,
-      editText,
-      isConnected,
-      isInternetReachable,
-      handleToggleComplete,
-      handleDeleteTask,
-      handleEditTask,
-      handleStartEditing,
-      handleCancelEditing,
-      handleSubmitEdit,
-    ]
-  );
-
-  const keyExtractor = useCallback((item: Task) => {
-    if (!item.id) {
-      return `error-${Date.now()}`;
-    }
-    return item.id;
-  }, []);
+  if (isLoading && !tasks.length) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
-    <FlatList
-      data={processedTasks}
-      renderItem={renderItem}
-      keyExtractor={keyExtractor}
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      bounces={true}
-      removeClippedSubviews={true}
-      initialNumToRender={10}
-      maxToRenderPerBatch={5}
-      updateCellsBatchingPeriod={50}
-      windowSize={3}
-      extraData={editingTaskId}
-    />
+    <View style={styles.container}>
+      <FlatList
+        data={tasks}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        style={styles.list}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+        removeClippedSubviews={true}
+        initialNumToRender={10}
+        maxToRenderPerBatch={5}
+        updateCellsBatchingPeriod={50}
+        windowSize={3}
+      />
+    </View>
   );
 };
 
@@ -178,22 +66,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  list: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
     paddingVertical: 8,
-  },
-  item: {
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0, 0, 0, 0.1)",
-  },
-  completedItem: {
-    opacity: 0.7,
-  },
-  completedText: {
-    textDecorationLine: "line-through",
-  },
-  offlineItem: {
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
   },
 });
 

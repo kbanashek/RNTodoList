@@ -14,7 +14,11 @@ declare module 'expo-network' {
     type: NetworkStateType;
     isConnected: boolean;
     isInternetReachable: boolean;
+    isChecking?: boolean;
   }
 
   export function getNetworkStateAsync(): Promise<NetworkState>;
+  export function getIpAddressAsync(): Promise<string>;
+  export function getMacAddressAsync(): Promise<string>;
+  export function isAirplaneModeEnabledAsync(): Promise<boolean>;
 }
