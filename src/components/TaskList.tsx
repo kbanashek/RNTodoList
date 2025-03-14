@@ -23,6 +23,20 @@ export const TaskList: React.FC<TaskListProps> = ({
   onEdit,
   onRetry,
 }) => {
+  // Sort tasks by creation date, newest first
+  const sortedTasks = [...tasks].sort((a, b) => {
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const renderItem = ({ item }: { item: Task }) => (
+    <TaskListItem
+      task={item}
+      onToggle={() => onToggle(item.id)}
+      onDelete={() => onDelete(item.id)}
+      onEdit={() => onEdit(item)}
+    />
+  );
+
   if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.centerContainer}>
@@ -57,16 +71,9 @@ export const TaskList: React.FC<TaskListProps> = ({
 
   return (
     <FlatList
-      data={tasks}
+      data={sortedTasks}
       keyExtractor={item => item.id}
-      renderItem={({ item }) => (
-        <TaskListItem
-          task={item}
-          onToggle={onToggle}
-          onDelete={onDelete}
-          onEdit={onEdit}
-        />
-      )}
+      renderItem={renderItem}
       contentContainerStyle={styles.listContent}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
       ListHeaderComponent={
@@ -94,6 +101,11 @@ export const TaskList: React.FC<TaskListProps> = ({
             )}
           </View>
         ) : null
+      }
+      ListEmptyComponent={
+        <View style={styles.centerContainer}>
+          <Text style={styles.emptyText}>No tasks yet. Add one to get started!</Text>
+        </View>
       }
     />
   );

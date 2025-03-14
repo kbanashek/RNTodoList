@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useTasks } from "../hooks/useTasks";
+import { NetworkStatus } from "../store/types";
 
 interface StatusMessage {
   text: string;
@@ -14,60 +15,61 @@ export const NetworkStatusBar: React.FC = () => {
   const { tasks } = useTasks();
 
   const getStatusMessage = (): StatusMessage => {
-    // Check for tasks with errors
-    const errorTasks = tasks.filter((task) => task.syncStatus === "error");
-    if (errorTasks.length > 0) {
-      return {
-        text: `Sync Error - ${errorTasks.length} task${
-          errorTasks.length === 1 ? "" : "s"
-        } failed`,
-        style: styles.errorText,
-        containerStyle: styles.errorContainer,
-      };
-    }
-
-    // Check for pending tasks
-    const pendingTasks = tasks.filter((task) => task.syncStatus === "pending");
-    if (pendingTasks.length > 0) {
-      return {
-        text: `Syncing ${pendingTasks.length} task${
-          pendingTasks.length === 1 ? "" : "s"
-        }...`,
-        style: styles.pendingText,
-        containerStyle: styles.pendingContainer,
-      };
-    }
-
-    // Show offline only when both connection and internet are down
-    if (!isConnected && !isInternetReachable) {
-      return {
-        text: "Offline Mode - Changes saved locally",
-        style: styles.offlineText,
-        containerStyle: styles.offlineContainer,
-      };
-    }
-
-    console.log(
-      "isConnected:",
-      isConnected,
-      "isInternetReachable:",
-      isInternetReachable
+    const errorTasks = tasks.filter(
+      (task) => task.syncStatus === NetworkStatus.Error
     );
-    // Connected but no internet
-    if (isConnected && !isInternetReachable) {
-      return {
-        text: "Limited Connectivity - Changes saved locally",
-        style: styles.warningText,
-        containerStyle: styles.warningContainer,
-      };
-    }
+    const pendingTasks = tasks.filter(
+      (task) => task.syncStatus === NetworkStatus.Pending
+    );
 
-    // Online with good connection
-    return {
-      text: "Online - All changes synced",
-      style: styles.onlineText,
-      containerStyle: styles.onlineContainer,
-    };
+    const status: NetworkStatus = (() => {
+      if (errorTasks.length > 0) return NetworkStatus.Error;
+      if (pendingTasks.length > 0) return NetworkStatus.Pending;
+      if (!isConnected) return NetworkStatus.Offline;
+      if (!isInternetReachable) return NetworkStatus.Limited;
+      return NetworkStatus.Online;
+    })();
+
+    switch (status) {
+      case NetworkStatus.Error:
+        return {
+          text: `Sync Error - ${errorTasks.length} task${
+            errorTasks.length === 1 ? "" : "s"
+          } failed`,
+          style: styles.errorText,
+          containerStyle: styles.errorContainer,
+        };
+
+      case NetworkStatus.Pending:
+        return {
+          text: `Syncing ${pendingTasks.length} task${
+            pendingTasks.length === 1 ? "" : "s"
+          }...`,
+          style: styles.pendingText,
+          containerStyle: styles.pendingContainer,
+        };
+
+      case NetworkStatus.Offline:
+        return {
+          text: "Offline Mode - Changes saved locally",
+          style: styles.offlineText,
+          containerStyle: styles.offlineContainer,
+        };
+
+      case NetworkStatus.Limited:
+        return {
+          text: "Limited Connectivity - Changes saved locally",
+          style: styles.warningText,
+          containerStyle: styles.warningContainer,
+        };
+
+      case NetworkStatus.Online:
+        return {
+          text: "Online - All changes synced",
+          style: styles.onlineText,
+          containerStyle: styles.onlineContainer,
+        };
+    }
   };
 
   const status = getStatusMessage();

@@ -6,6 +6,7 @@ import {
   AddChange,
   UpdateChange,
   DeleteChange,
+  NetworkStatus,
 } from "../store/types";
 
 // Type guards
@@ -96,7 +97,7 @@ class TodoService {
   public async init(): Promise<TodoServiceResult> {
     try {
       await this.initialize();
-      
+
       // Return local data immediately for offline-first experience
       const localResult = {
         tasks: this.tasks,
@@ -105,15 +106,15 @@ class TodoService {
 
       // Start background sync if we have pending changes
       if (this.pendingChanges.length > 0) {
-        this.syncTasks().catch(error => {
-          console.warn('Background sync failed:', error);
+        this.syncTasks().catch((error) => {
+          console.warn("Background sync failed:", error);
           // Error is handled in syncTasks, no need to throw
         });
       }
 
       // Try to fetch latest data in background
-      this.fetchTasksFromApi().catch(error => {
-        console.warn('Background API fetch failed:', error);
+      this.fetchTasksFromApi().catch((error) => {
+        console.warn("Background API fetch failed:", error);
         // Error is handled in fetchTasksFromApi, no need to throw
       });
 
@@ -140,122 +141,132 @@ class TodoService {
 
       // Handle case where no todos exist yet
       if (!data.todos || !Array.isArray(data.todos)) {
-        console.warn('No todos found in API response');
+        console.warn("No todos found in API response");
         return;
       }
 
       // Convert API tasks to our Task format with proper timestamps
       const apiTasks: Task[] = data.todos.map(
-        (todo: { id: number; todo: string; completed: boolean; userId: number }) => ({
+        (todo: {
+          id: number;
+          todo: string;
+          completed: boolean;
+          userId: number;
+        }) => ({
           id: `server_${todo.id}`,
           title: todo.todo,
           completed: todo.completed,
           createdAt: new Date().toISOString(), // We don't get these from the API
           updatedAt: new Date().toISOString(),
-          syncStatus: 'synced',
+          syncStatus: NetworkStatus.Online,
         })
       );
 
       // Get all tasks that have pending changes
       const pendingTaskIds = new Set(
         this.pendingChanges
-          .filter(change => change.type === 'update' || change.type === 'delete')
-          .map(change => change.entityId)
+          .filter(
+            (change) => change.type === "update" || change.type === "delete"
+          )
+          .map((change) => change.entityId)
       );
 
       // Get all local tasks that aren't from server
-      const localTasks = this.tasks.filter(t => !t.id.startsWith('server_'));
+      const localTasks = this.tasks.filter((t) => !t.id.startsWith("server_"));
 
       // Merge tasks, prioritizing:
       // 1. Local tasks with pending changes
       // 2. Local tasks not from server
       // 3. Server tasks that don't conflict with local tasks
       this.tasks = [
-        ...this.tasks.filter(task => pendingTaskIds.has(task.id)), // Keep tasks with pending changes
-        ...localTasks.filter(task => !pendingTaskIds.has(task.id)), // Keep local tasks without pending changes
-        ...apiTasks.filter(task => 
-          !pendingTaskIds.has(task.id) && // Don't override tasks with pending changes
-          !localTasks.some(lt => lt.title === task.title) // Don't add duplicates
+        ...this.tasks.filter((task) => pendingTaskIds.has(task.id)), // Keep tasks with pending changes
+        ...localTasks.filter((task) => !pendingTaskIds.has(task.id)), // Keep local tasks without pending changes
+        ...apiTasks.filter(
+          (task) =>
+            !pendingTaskIds.has(task.id) && // Don't override tasks with pending changes
+            !localTasks.some((lt) => lt.title === task.title) // Don't add duplicates
         ),
       ];
 
       await this.saveToStorage();
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      console.error("Error fetching tasks:", error);
       // Don't throw - maintain offline-first functionality
       // The app will continue with local data
     }
   }
 
   public async addTask(title: string): Promise<TodoServiceResult> {
-    try {
-      await this.initialize();
-      const now = new Date().toISOString();
-      const taskId = this.generateId("local");
+    const now = new Date().toISOString();
+    const taskId = this.generateId("task");
 
-      // Create task with pending status for proper sync state
-      const newTask: Task = {
-        id: taskId,
-        title,
+    // Create new task
+    const newTask: Task = {
+      id: taskId,
+      title,
+      completed: false,
+      createdAt: now,
+      updatedAt: now,
+      syncStatus: NetworkStatus.Pending,
+    };
+
+    // Add task to beginning of list
+    this.tasks = [newTask, ...this.tasks];
+
+    // Create pending change
+    const pendingChange: AddChange = {
+      id: this.generateId("change"),
+      type: "add",
+      entityId: taskId,
+      data: {
+        todo: title,
         completed: false,
-        createdAt: now,
-        updatedAt: now,
-        syncStatus: "pending",
-      };
+        userId: this.API_CONFIG.userId,
+      },
+      timestamp: now,
+      retryCount: 0,
+    };
 
-      // Add task to local storage
-      this.tasks.push(newTask);
+    // Add change to queue
+    this.pendingChanges.push(pendingChange);
 
-      // Queue change for later sync
-      const pendingChange: AddChange = {
-        id: this.generateId("change"),
-        type: "add",
-        entityId: taskId,
-        data: {
-          todo: title,
-          completed: false,
-          userId: this.API_CONFIG.userId,
-        },
-        timestamp: now,
-        retryCount: 0,
-      };
+    // Save state
+    await this.saveToStorage();
 
-      this.pendingChanges.push(pendingChange);
-      await this.saveToStorage();
+    // Start sync in background
+    this.syncTasks().catch((error) => {
+      console.warn("Background sync failed:", error);
+    });
 
-      // Start sync process immediately in background
-      this.processPendingChange(pendingChange).catch(error => {
-        console.warn('Background sync failed:', error);
-      });
-
-      return {
-        tasks: this.tasks,
-        pendingChanges: this.pendingChanges,
-      };
-    } catch (error) {
-      console.error("Error adding task:", error);
-      throw error;
-    }
+    return {
+      tasks: this.tasks,
+      pendingChanges: this.pendingChanges,
+    };
   }
 
-  public async editTask(taskId: string, updates: Partial<Task>): Promise<TodoServiceResult> {
+  public async editTask(
+    taskId: string,
+    updates: Partial<Task>
+  ): Promise<TodoServiceResult> {
     try {
       await this.initialize();
 
-      const taskIndex = this.tasks.findIndex(t => t.id === taskId);
+      const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
       if (taskIndex === -1) {
         throw new Error(`Task not found: ${taskId}`);
       }
 
       const now = new Date().toISOString();
-      const serverTaskId = taskId.startsWith('server_') ? taskId.replace('server_', '') : null;
+      const serverTaskId = taskId.startsWith("server_")
+        ? taskId.replace("server_", "")
+        : null;
 
       // Update task with pending status
       this.tasks[taskIndex] = {
         ...this.tasks[taskIndex],
         ...updates,
         updatedAt: now,
-        syncStatus: 'pending',
+        syncStatus: NetworkStatus.Pending,
       };
 
       // Queue change for later sync
@@ -265,7 +276,10 @@ class TodoService {
         entityId: taskId,
         data: {
           todo: updates.title || this.tasks[taskIndex].title,
-          completed: updates.completed !== undefined ? updates.completed : this.tasks[taskIndex].completed,
+          completed:
+            updates.completed !== undefined
+              ? updates.completed
+              : this.tasks[taskIndex].completed,
           userId: this.API_CONFIG.userId,
         },
         timestamp: now,
@@ -276,8 +290,8 @@ class TodoService {
       await this.saveToStorage();
 
       // Start sync process immediately in background
-      this.processPendingChange(pendingChange).catch(error => {
-        console.warn('Background sync failed:', error);
+      this.processPendingChange(pendingChange).catch((error) => {
+        console.warn("Background sync failed:", error);
       });
 
       return {
@@ -329,7 +343,8 @@ class TodoService {
 
       // Process pending changes in chronological order
       const sortedChanges = [...this.pendingChanges].sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
 
       // Process each change with exponential backoff
@@ -338,14 +353,15 @@ class TodoService {
           // Calculate delay based on retry count
           const retryCount = change.retryCount || 0;
           if (retryCount > 0) {
-            const delay = this.API_CONFIG.baseRetryDelay * Math.pow(2, retryCount - 1);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            const delay =
+              this.API_CONFIG.baseRetryDelay * Math.pow(2, retryCount - 1);
+            await new Promise((resolve) => setTimeout(resolve, delay));
           }
 
           await this.processPendingChange(change);
         } catch (error) {
           // Log error but continue processing other changes
-          console.error('Error processing pending change:', error);
+          console.error("Error processing pending change:", error);
           // Error handling is done in processPendingChange
         }
       }
@@ -356,7 +372,7 @@ class TodoService {
         pendingChanges: this.pendingChanges,
       };
     } catch (error) {
-      console.error('Error syncing tasks:', error);
+      console.error("Error syncing tasks:", error);
       // Return current state even if sync failed
       return {
         tasks: this.tasks,
@@ -368,20 +384,20 @@ class TodoService {
   private async processPendingChange(change: PendingChange): Promise<void> {
     try {
       const taskId = change.entityId;
-      const serverTaskId = taskId.startsWith('server_') ? taskId.replace('server_', '') : null;
+      const serverTaskId = taskId.startsWith("server_")
+        ? taskId.replace("server_", "")
+        : null;
 
       switch (change.type) {
         case "add": {
           if (isAddChange(change)) {
-            // For demo purposes, simulate successful add since dummyjson doesn't support it
-            const taskIndex = this.tasks.findIndex(t => t.id === taskId);
+            const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
             if (taskIndex !== -1) {
-              // Add artificial delay to simulate network latency
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              
+              await new Promise((resolve) => setTimeout(resolve, 300));
+
               this.tasks[taskIndex] = {
                 ...this.tasks[taskIndex],
-                syncStatus: 'synced',
+                syncStatus: NetworkStatus.Online,
                 updatedAt: new Date().toISOString(),
               };
               await this.saveToStorage();
@@ -392,26 +408,14 @@ class TodoService {
         case "update": {
           if (isUpdateChange(change)) {
             // Add artificial delay to simulate network latency
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            if (serverTaskId) {
-              const response = await fetch(`${this.API_CONFIG.baseUrl}/todos/${serverTaskId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(change.data),
-              });
-
-              if (!response.ok) {
-                throw new Error(`Failed to update task: ${response.status}`);
-              }
-            }
+            await new Promise((resolve) => setTimeout(resolve, 300));
 
             // Update local task sync status
-            const taskIndex = this.tasks.findIndex(t => t.id === taskId);
+            const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
             if (taskIndex !== -1) {
               this.tasks[taskIndex] = {
                 ...this.tasks[taskIndex],
-                syncStatus: 'synced',
+                syncStatus: NetworkStatus.Online,
                 updatedAt: new Date().toISOString(),
               };
               await this.saveToStorage();
@@ -422,17 +426,20 @@ class TodoService {
         case "delete": {
           if (isDeleteChange(change)) {
             // Add artificial delay to simulate network latency
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 500));
 
-            if (serverTaskId) {
-              const response = await fetch(`${this.API_CONFIG.baseUrl}/todos/${serverTaskId}`, {
-                method: "DELETE",
-              });
+            // if (serverTaskId) {
+            //   const response = await fetch(
+            //     `${this.API_CONFIG.baseUrl}/todos/${serverTaskId}`,
+            //     {
+            //       method: "DELETE",
+            //     }
+            //   );
 
-              if (!response.ok) {
-                throw new Error(`Failed to delete task: ${response.status}`);
-              }
-            }
+            //   if (!response.ok) {
+            //     throw new Error(`Failed to delete task: ${response.status}`);
+            //   }
+            // }
             // Task is already removed from this.tasks
           }
           break;
@@ -440,21 +447,23 @@ class TodoService {
       }
 
       // Remove the processed change
-      const changeIndex = this.pendingChanges.findIndex(c => c.id === change.id);
+      const changeIndex = this.pendingChanges.findIndex(
+        (c) => c.id === change.id
+      );
       if (changeIndex !== -1) {
         this.pendingChanges.splice(changeIndex, 1);
         await this.saveToStorage();
       }
     } catch (error) {
-      console.error('Error processing change', change.id, ':', error);
-      
+      console.error("Error processing change", change.id, ":", error);
+
       // Update task sync status to error
-      if (change.type !== 'delete') {
-        const taskIndex = this.tasks.findIndex(t => t.id === change.entityId);
+      if (change.type !== "delete") {
+        const taskIndex = this.tasks.findIndex((t) => t.id === change.entityId);
         if (taskIndex !== -1) {
           this.tasks[taskIndex] = {
             ...this.tasks[taskIndex],
-            syncStatus: 'error',
+            syncStatus: NetworkStatus.Error,
             updatedAt: new Date().toISOString(),
           };
           await this.saveToStorage();
@@ -462,7 +471,9 @@ class TodoService {
       }
 
       // Increment retry count
-      const changeIndex = this.pendingChanges.findIndex(c => c.id === change.id);
+      const changeIndex = this.pendingChanges.findIndex(
+        (c) => c.id === change.id
+      );
       if (changeIndex !== -1) {
         const updatedChange = {
           ...this.pendingChanges[changeIndex],

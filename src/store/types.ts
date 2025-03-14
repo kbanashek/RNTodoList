@@ -4,47 +4,64 @@ export interface Task {
   completed: boolean;
   createdAt: string;
   updatedAt: string;
-  syncStatus: 'synced' | 'pending' | 'error';
+  syncStatus: NetworkStatus.Online | NetworkStatus.Pending | NetworkStatus.Error;
   error?: string; // Error message for sync failures
 }
 
-export type PendingChangeData = {
-  todo: string;
-  completed: boolean;
-  userId: number;
-};
-
-export type PendingChangeBase = {
+export interface AddChange {
   id: string;
+  type: "add";
+  entityId: string;
+  data: {
+    todo: string;
+    completed: boolean;
+    userId: number;
+  };
   timestamp: string;
   retryCount: number;
   error?: string;
   lastRetryTimestamp?: string; // Track last retry attempt
-};
+}
 
-export type AddChange = PendingChangeBase & {
-  type: 'add';
+export interface UpdateChange {
+  id: string;
+  type: "update";
   entityId: string;
-  data: PendingChangeData;
-};
+  data: {
+    todo: string;
+    completed: boolean;
+    userId: number;
+  };
+  timestamp: string;
+  retryCount: number;
+  error?: string;
+  lastRetryTimestamp?: string; // Track last retry attempt
+}
 
-export type UpdateChange = PendingChangeBase & {
-  type: 'update';
+export interface DeleteChange {
+  id: string;
+  type: "delete";
   entityId: string;
-  data: PendingChangeData;
-};
-
-export type DeleteChange = PendingChangeBase & {
-  type: 'delete';
-  entityId: string;
-};
+  timestamp: string;
+  retryCount: number;
+  error?: string;
+  lastRetryTimestamp?: string; // Track last retry attempt
+}
 
 export type PendingChange = AddChange | UpdateChange | DeleteChange;
+
+export enum NetworkStatus {
+  Error = "error",
+  Pending = "pending",
+  Offline = "offline",
+  Limited = "limited",
+  Online = "online",
+}
 
 export interface NetworkState {
   isConnected: boolean;
   isInternetReachable: boolean;
-  connectionType: string;
+  connectionType: string | null;
   lastCheckTimestamp: string;
 }
 
