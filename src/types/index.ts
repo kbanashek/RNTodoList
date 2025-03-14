@@ -16,7 +16,13 @@ export interface NetworkState {
   lastChecked?: number;
 }
 
-export interface PendingChange<T> {
+export interface ApiTodoRequest {
+  todo: string;
+  completed: boolean;
+  userId: number;
+}
+
+export interface PendingChange<T = ApiTodoRequest> {
   id: string;
   type: 'add' | 'update' | 'delete';
   entityId?: string;
@@ -29,7 +35,7 @@ export interface PendingChange<T> {
 
 export interface OfflineState {
   lastSyncTimestamp: number;
-  pendingChanges: PendingChange<any>[];
+  pendingChanges: PendingChange[];
   isInitialSync: boolean;
   syncErrors: {
     changeId: string;

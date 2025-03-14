@@ -6,7 +6,7 @@ import { useNetworkStatus } from './useNetworkStatus';
 export const useTasks = () => {
   const { isConnected } = useNetworkStatus();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [pendingChanges, setPendingChanges] = useState<PendingChange<Task>[]>([]);
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

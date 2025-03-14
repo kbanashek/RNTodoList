@@ -1,12 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Task, PendingChange, SyncStatus } from "@types";
+import { Task, PendingChange, SyncStatus, ApiTodoRequest } from "@types";
 
 const TASKS_STORAGE_KEY = "@tasks";
 const PENDING_CHANGES_KEY = "@pending_changes";
 const API_URL = "https://dummyjson.com/todos";
 const API_CONFIG = {
-  userId: "20",
-  limit: "5",
+  userId: 10,
+  limit: 10,
   maxRetries: 3,
   baseRetryDelay: 1000, // 1 second
 } as const;
@@ -25,11 +25,18 @@ interface ApiTodoResponse {
 
 class TodoService {
   private tasks: Task[] = [];
-  private pendingChanges: PendingChange<Task>[] = [];
+  private pendingChanges: PendingChange[] = [];
   private initPromise: Promise<void>;
+  private lastGeneratedId = 0;
 
   constructor() {
     this.initPromise = this.init();
+  }
+
+  private generateUniqueId(prefix: string): string {
+    const timestamp = Date.now();
+    this.lastGeneratedId += 1;
+    return `${prefix}_${timestamp}_${this.lastGeneratedId}`;
   }
 
   private async init() {
@@ -53,10 +60,14 @@ class TodoService {
   }
 
   private async fetchTasksFromApi() {
-    const endpoint = `${API_URL}/user/${API_CONFIG.userId}?limit=${API_CONFIG.limit}`;
-    console.log("Fetching tasks from API...", endpoint);
     try {
-      const response = await fetch(endpoint);
+      const url = `${API_URL}/user/${API_CONFIG.userId}?limit=${API_CONFIG.limit}`;
+      console.log("Fetching tasks from API:", url);
+
+      // https://dummyjson.com/todos/userid/10?limit=10
+      // https://dummyjson.com/todos/user/20?limit=5
+
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch tasks");
       const data: ApiTodoResponse = await response.json();
       const apiTasks: Task[] = data.todos.map((todo) => ({
@@ -99,7 +110,7 @@ class TodoService {
     return this.tasks;
   }
 
-  getPendingChanges(): PendingChange<Task>[] {
+  getPendingChanges(): PendingChange[] {
     return this.pendingChanges;
   }
 
@@ -109,7 +120,7 @@ class TodoService {
     await this.initPromise;
     const now = new Date().toISOString();
     const newTask: Task = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: this.generateUniqueId("task"),
       createdAt: now,
       updatedAt: now,
       ...taskData,
@@ -118,10 +129,16 @@ class TodoService {
     };
 
     this.tasks.push(newTask);
+    const apiData: ApiTodoRequest = {
+      todo: newTask.title,
+      completed: newTask.completed,
+      userId: API_CONFIG.userId,
+    };
+
     this.pendingChanges.push({
-      id: Math.random().toString(36).substr(2, 9),
+      id: this.generateUniqueId("change"),
       type: "add",
-      data: newTask,
+      data: apiData,
       timestamp: Date.now(),
       retryCount: 0,
     });
@@ -145,11 +162,17 @@ class TodoService {
     };
 
     this.tasks[taskIndex] = updatedTask;
+    const apiData: ApiTodoRequest = {
+      todo: updatedTask.title,
+      completed: updatedTask.completed,
+      userId: API_CONFIG.userId,
+    };
+
     this.pendingChanges.push({
-      id: Math.random().toString(36).substr(2, 9),
+      id: this.generateUniqueId("change"),
       type: "update",
       entityId: taskId,
-      data: updatedTask,
+      data: apiData,
       timestamp: Date.now(),
       retryCount: 0,
     });
@@ -167,11 +190,17 @@ class TodoService {
 
     const deletedTask = this.tasks[taskIndex];
     this.tasks.splice(taskIndex, 1);
+    const apiData: ApiTodoRequest = {
+      todo: deletedTask.title,
+      completed: deletedTask.completed,
+      userId: API_CONFIG.userId,
+    };
+
     this.pendingChanges.push({
-      id: Math.random().toString(36).substr(2, 9),
+      id: this.generateUniqueId("change"),
       type: "delete",
       entityId: taskId,
-      data: deletedTask,
+      data: apiData,
       timestamp: Date.now(),
       retryCount: 0,
     });
@@ -189,9 +218,8 @@ class TodoService {
       if (retryCount >= API_CONFIG.maxRetries) {
         throw error;
       }
-
       const delay = API_CONFIG.baseRetryDelay * Math.pow(2, retryCount);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
       return this.retryWithBackoff(operation, retryCount + 1);
     }
   }
@@ -205,51 +233,69 @@ class TodoService {
     for (const change of sortedChanges) {
       try {
         let response: Response;
-        
+        let taskId: string | undefined;
+
         switch (change.type) {
           case "add":
             response = await this.retryWithBackoff(
               () =>
-                fetch(`${API_URL}`, {
+                fetch(`${API_URL}/add`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(change.data),
+                  body: JSON.stringify({
+                    ...change.data,
+                    userId: API_CONFIG.userId,
+                  }),
                 }),
               0
             );
             if (!response.ok) {
-              throw new Error(`Failed to add task: ${response.statusText}`);
+              const errorText = await response.text();
+              throw new Error(`Failed to add task: ${errorText}`);
             }
+            // Find the task by matching its data with the API request
+            taskId = this.tasks.find(
+              (t) =>
+                t.title === change.data?.todo &&
+                t.completed === change.data?.completed
+            )?.id;
             break;
 
           case "update":
-            if (change.entityId && change.data) {
+            taskId = change.entityId;
+            if (taskId && change.data) {
               response = await this.retryWithBackoff(
                 () =>
-                  fetch(`${API_URL}/${change.entityId}`, {
+                  fetch(`${API_URL}/${taskId}`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(change.data),
+                    body: JSON.stringify({
+                      ...change.data,
+                      userId: API_CONFIG.userId,
+                    }),
                   }),
                 0
               );
               if (!response.ok) {
-                throw new Error(`Failed to update task: ${response.statusText}`);
+                const errorText = await response.text();
+                throw new Error(`Failed to update task: ${errorText}`);
               }
             }
             break;
 
           case "delete":
-            if (change.entityId) {
+            taskId = change.entityId;
+            if (taskId) {
               response = await this.retryWithBackoff(
                 () =>
-                  fetch(`${API_URL}/${change.entityId}`, {
+                  fetch(`${API_URL}/${taskId}?userId=${API_CONFIG.userId}`, {
                     method: "DELETE",
                   }),
                 0
               );
               if (!response.ok) {
-                throw new Error(`Failed to delete task: ${response.statusText}`);
+                const errorText = await response.text();
+                throw new Error(`Failed to delete task: ${errorText}`);
               }
             }
             break;
@@ -264,38 +310,33 @@ class TodoService {
         }
 
         // Update task sync status to synced on success
-        if (change.type !== "delete" && change.data) {
-          const taskId = change.entityId || change.data.id;
-          if (taskId) {
-            const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
-            if (taskIndex !== -1) {
-              this.tasks[taskIndex].syncStatus = "synced" as SyncStatus;
-            }
+        if (change.type !== "delete" && taskId) {
+          const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
+          if (taskIndex !== -1) {
+            this.tasks[taskIndex].syncStatus = "synced" as SyncStatus;
           }
         }
 
         await this.saveOfflineData();
       } catch (error) {
         console.error(`Error syncing ${change.type} change:`, error);
-        
+
         // Update retry info in pending changes
         change.retryCount = (change.retryCount || 0) + 1;
         change.lastRetry = Date.now();
         change.error = error instanceof Error ? error.message : "Unknown error";
 
         // Update task sync status to error
-        if (change.type !== "delete" && change.data) {
-          const taskId = change.entityId || change.data.id;
-          if (taskId) {
-            const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
-            if (taskIndex !== -1) {
-              this.tasks[taskIndex].syncStatus = "error" as SyncStatus;
-            }
+        if (change.type !== "delete" && change.entityId) {
+          const taskIndex = this.tasks.findIndex(
+            (t) => t.id === change.entityId
+          );
+          if (taskIndex !== -1) {
+            this.tasks[taskIndex].syncStatus = "error" as SyncStatus;
           }
         }
 
         await this.saveOfflineData();
-        throw error;
       }
     }
   }

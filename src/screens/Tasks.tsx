@@ -102,7 +102,7 @@ export const Tasks: React.FC = () => {
         <FlatList
           data={tasks}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
         />
       )}
