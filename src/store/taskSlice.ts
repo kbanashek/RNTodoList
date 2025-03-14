@@ -3,40 +3,54 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 export interface Task {
   id: string;
   text: string;
+  completed: boolean;
   date: string;
 }
 
-interface TaskState {
+interface TasksState {
   tasks: Task[];
   editingTaskID: string | null;
 }
 
-const initialState: TaskState = {
+const initialState: TasksState = {
   tasks: [],
   editingTaskID: null,
 };
 
-export const taskSlice = createSlice({
+const taskSlice = createSlice({
   name: 'tasks',
   initialState,
   reducers: {
-    addTask: (state, action: PayloadAction<{ text: string }>) => {
-      const newTask: Task = {
-        id: Date.now().toString(),
-        text: action.payload.text,
-        date: new Date().toLocaleString(),
-      };
-      state.tasks.push(newTask);
+    setTasks: (state, action: PayloadAction<Task[]>) => {
+      // Keep tasks with temporary IDs and add new tasks
+      const tempTasks = state.tasks.filter(task => task.id.startsWith('temp-'));
+      const nonTempNewTasks = action.payload.filter(task => !task.id.startsWith('temp-'));
+      state.tasks = [...tempTasks, ...nonTempNewTasks];
     },
-    deleteTask: (state, action: PayloadAction<{ id: string }>) => {
+    addTask: (state, action: PayloadAction<Task>) => {
+      // Remove any existing task with the same ID
       state.tasks = state.tasks.filter(task => task.id !== action.payload.id);
+      // Add the new task at the beginning
+      state.tasks.unshift(action.payload);
     },
     editTask: (state, action: PayloadAction<{ id: string; text: string }>) => {
-      const task = state.tasks.find(task => task.id === action.payload.id);
+      const task = state.tasks.find((t) => t.id === action.payload.id);
       if (task) {
         task.text = action.payload.text;
+        state.editingTaskID = null;
       }
-      state.editingTaskID = null;
+    },
+    deleteTask: (state, action: PayloadAction<{ id: string }>) => {
+      state.tasks = state.tasks.filter((task) => task.id !== action.payload.id);
+      if (state.editingTaskID === action.payload.id) {
+        state.editingTaskID = null;
+      }
+    },
+    toggleTaskComplete: (state, action: PayloadAction<{ id: string }>) => {
+      const task = state.tasks.find((t) => t.id === action.payload.id);
+      if (task) {
+        task.completed = !task.completed;
+      }
     },
     setEditingTaskID: (state, action: PayloadAction<string | null>) => {
       state.editingTaskID = action.payload;
@@ -44,13 +58,13 @@ export const taskSlice = createSlice({
   },
 });
 
-export const { addTask, deleteTask, editTask, setEditingTaskID } = taskSlice.actions;
-
-export const selectTasks = (state: RootState) => state.tasks.tasks;
-export const selectEditingTaskID = (state: RootState) => state.tasks.editingTaskID;
-
-export interface RootState {
-  tasks: TaskState;
-}
+export const {
+  setTasks,
+  addTask,
+  editTask,
+  deleteTask,
+  toggleTaskComplete,
+  setEditingTaskID,
+} = taskSlice.actions;
 
 export default taskSlice.reducer;

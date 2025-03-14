@@ -1,133 +1,178 @@
 import React, { useState } from "react";
-import { View, TextInput, StyleSheet } from "react-native";
-import { Text, useTheme, Button } from "react-native-paper";
-import type { Task } from "../store/taskSlice";
+import { View, StyleSheet } from "react-native";
+import {
+  TextInput,
+  IconButton,
+  Checkbox,
+  Text,
+  useTheme,
+} from "react-native-paper";
+import { Task } from "../store/taskSlice";
 
-export interface TaskListItemProps {
+interface TaskListItemProps {
   task: Task;
-
   isEditing: boolean;
-  onDelete: (id: string) => void;
-  onEdit: (id: string) => void;
-  onSave: (id: string, text: string) => void;
+  editText: string;
+  isOffline: boolean;
+  onToggleComplete: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
+  onEditTask: (task: Task, newText: string) => void;
+  onStartEditing: () => void;
+  onCancelEditing: () => void;
+  onChangeEditText: (text: string) => void;
+  onSubmitEditText: () => void;
 }
 
-const TaskListItem = ({
+const TaskListItem: React.FC<TaskListItemProps> = ({
   task,
   isEditing,
-  onDelete,
-  onEdit,
-  onSave,
-}: TaskListItemProps) => {
-  const [editText, setEditText] = useState(task.text);
+  editText,
+  isOffline,
+  onToggleComplete,
+  onDeleteTask,
+  onStartEditing,
+  onCancelEditing,
+  onChangeEditText,
+  onSubmitEditText,
+}) => {
   const theme = useTheme();
+  const [isHovered, setIsHovered] = useState(false);
 
-  const handleSave = () => {
-    const trimmedText = editText.trim();
-    if (trimmedText) {
-      onSave(task.id, trimmedText);
+  const isTemporary = task.id.startsWith("temp-");
+
+  const renderTaskText = () => {
+    if (isEditing) {
+      return (
+        <TextInput
+          value={editText}
+          onChangeText={onChangeEditText}
+          onSubmitEditing={onSubmitEditText}
+          onBlur={onCancelEditing}
+          autoFocus
+          mode="flat"
+          style={[styles.input, { backgroundColor: "transparent" }]}
+          textColor={theme.colors.onSurface}
+          underlineColor="transparent"
+          activeUnderlineColor={theme.colors.primary}
+        />
+      );
     }
+
+    return (
+      <Text
+        style={[
+          styles.text,
+          task.completed && styles.completedText,
+          isOffline && styles.offlineText,
+        ]}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
+        {task.text}
+      </Text>
+    );
   };
 
   return (
     <View
       style={[
-        styles.taskItem,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.outline,
-        },
+        styles.container,
+        task.completed && styles.completedContainer,
+        isOffline && styles.offlineContainer,
+        isTemporary && styles.temporaryContainer,
       ]}
+      onTouchStart={() => setIsHovered(true)}
+      onTouchEnd={() => setIsHovered(false)}
     >
-      {isEditing ? (
-        <View>
-          <TextInput
-            testID="edit-input"
-            style={[
-              styles.taskTextEdit,
-              {
-                borderColor: theme.colors.outline,
-                backgroundColor: theme.colors.background,
-                color: theme.colors.onBackground,
-              },
-            ]}
-            value={editText}
-            onChangeText={setEditText}
-            autoFocus
+      <View style={styles.checkboxContainer}>
+        <Checkbox
+          status={task.completed ? "checked" : "unchecked"}
+          onPress={() => onToggleComplete(task)}
+          color={theme.colors.primary}
+        />
+      </View>
+      <View style={styles.contentContainer}>{renderTaskText()}</View>
+      <View style={[styles.actionsContainer, isHovered && styles.actionsVisible]}>
+        {!isEditing && (
+          <>
+            <IconButton
+              icon="pencil"
+              size={20}
+              onPress={onStartEditing}
+              iconColor={theme.colors.primary}
+            />
+            <IconButton
+              icon="delete"
+              size={20}
+              onPress={() => onDeleteTask(task.id)}
+              iconColor={theme.colors.error}
+            />
+          </>
+        )}
+        {isTemporary && (
+          <IconButton
+            icon="sync"
+            size={20}
+            iconColor={theme.colors.secondary}
+            style={styles.syncIcon}
           />
-          <Button
-            testID="save-button"
-            mode="contained"
-            onPress={handleSave}
-            style={styles.actionButton}
-          >
-            Save
-          </Button>
-        </View>
-      ) : (
-        <View>
-          <Text variant="bodyLarge" style={styles.taskText}>
-            {task.text}
-          </Text>
-          <Text
-            variant="bodySmall"
-            style={[styles.taskDate, { color: theme.colors.secondary }]}
-          >
-            {task.date}
-          </Text>
-          <View style={styles.actionsContainer}>
-            <Button
-              testID="edit-button"
-              mode="contained"
-              onPress={() => onEdit(task.id)}
-              style={styles.actionButton}
-            >
-              Edit
-            </Button>
-            <Button
-              testID="delete-button"
-              mode="contained"
-              buttonColor={theme.colors.error}
-              onPress={() => onDelete(task.id)}
-              style={styles.actionButton}
-            >
-              Delete
-            </Button>
-          </View>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  taskItem: {
-    padding: 16,
-    marginBottom: 8,
-    borderRadius: 8,
-    borderWidth: 1,
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0, 0, 0, 0.1)",
   },
-  taskText: {
-    marginBottom: 4,
+  completedContainer: {
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
   },
-  taskTextEdit: {
-    fontSize: 16,
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+  offlineContainer: {
+    backgroundColor: "rgba(0, 0, 0, 0.02)",
   },
-  taskDate: {
-    marginBottom: 12,
+  temporaryContainer: {
+    backgroundColor: "rgba(255, 193, 7, 0.05)",
+  },
+  checkboxContainer: {
+    marginRight: 8,
+  },
+  contentContainer: {
+    flex: 1,
+    marginRight: 8,
   },
   actionsContainer: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
+    alignItems: "center",
+    opacity: 0.7,
   },
-  actionButton: {
-    borderRadius: 6,
-    minWidth: 70,
+  actionsVisible: {
+    opacity: 1,
+  },
+  input: {
+    height: 40,
+    paddingHorizontal: 0,
+    fontSize: 16,
+  },
+  text: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  completedText: {
+    textDecorationLine: "line-through",
+    opacity: 0.7,
+  },
+  offlineText: {
+    opacity: 0.8,
+  },
+  syncIcon: {
+    marginLeft: -8,
   },
 });
 

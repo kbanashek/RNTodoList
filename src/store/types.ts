@@ -1,8 +1,4 @@
-export interface Task {
-  id: string;
-  text: string;
-  date: string;
-}
+import { Task } from './taskSlice';
 
 export interface TasksState {
   tasks: Task[];
