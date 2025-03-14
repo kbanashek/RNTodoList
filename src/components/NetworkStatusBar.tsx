@@ -1,64 +1,70 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useAppSelector } from '../store';
-import { todoService } from '../services/todoService';
-import { PendingChange } from '../store/types';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { useNetworkStatus } from "../hooks/useNetworkStatus";
+import { useTasks } from "../hooks/useTasks";
+
+interface StatusMessage {
+  text: string;
+  style: any;
+  containerStyle: any;
+}
 
 export const NetworkStatusBar: React.FC = () => {
-  const { isConnected, isInternetReachable, connectionType } = useAppSelector(state => state.network);
-  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
+  const { isConnected, isInternetReachable } = useNetworkStatus();
+  const { tasks } = useTasks();
 
-  useEffect(() => {
-    const loadPendingChanges = async () => {
-      try {
-        const changes = await todoService.getPendingChanges();
-        setPendingChanges(changes);
-      } catch (error) {
-        console.error('Error loading pending changes:', error);
-      }
-    };
-
-    loadPendingChanges();
-    const interval = setInterval(loadPendingChanges, 3000); // Check every 3 seconds per memory
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const getStatusMessage = () => {
-    if (!isConnected) {
+  const getStatusMessage = (): StatusMessage => {
+    // Check for tasks with errors
+    const errorTasks = tasks.filter((task) => task.syncStatus === "error");
+    if (errorTasks.length > 0) {
       return {
-        text: 'Offline Mode - Changes saved locally',
+        text: `Sync Error - ${errorTasks.length} task${
+          errorTasks.length === 1 ? "" : "s"
+        } failed`,
+        style: styles.errorText,
+        containerStyle: styles.errorContainer,
+      };
+    }
+
+    // Check for pending tasks
+    const pendingTasks = tasks.filter((task) => task.syncStatus === "pending");
+    if (pendingTasks.length > 0) {
+      return {
+        text: `Syncing ${pendingTasks.length} task${
+          pendingTasks.length === 1 ? "" : "s"
+        }...`,
+        style: styles.pendingText,
+        containerStyle: styles.pendingContainer,
+      };
+    }
+
+    // Show offline only when both connection and internet are down
+    if (!isConnected && !isInternetReachable) {
+      return {
+        text: "Offline Mode - Changes saved locally",
         style: styles.offlineText,
         containerStyle: styles.offlineContainer,
       };
     }
 
-    if (!isInternetReachable) {
+    console.log(
+      "isConnected:",
+      isConnected,
+      "isInternetReachable:",
+      isInternetReachable
+    );
+    // Connected but no internet
+    if (isConnected && !isInternetReachable) {
       return {
-        text: `Limited connectivity (${connectionType}) - Local changes only`,
+        text: "Limited Connectivity - Changes saved locally",
         style: styles.warningText,
         containerStyle: styles.warningContainer,
       };
     }
 
-    if (pendingChanges.length > 0) {
-      const errorChanges = pendingChanges.filter(change => change.error);
-      if (errorChanges.length > 0) {
-        return {
-          text: `Sync Error - ${errorChanges.length} change${errorChanges.length === 1 ? '' : 's'} failed`,
-          style: styles.errorText,
-          containerStyle: styles.errorContainer,
-        };
-      }
-      return {
-        text: `Syncing ${pendingChanges.length} change${pendingChanges.length === 1 ? '' : 's'}...`,
-        style: styles.syncingText,
-        containerStyle: styles.syncingContainer,
-      };
-    }
-
+    // Online with good connection
     return {
-      text: `Connected (${connectionType}) - All changes synced`,
+      text: "Online - All changes synced",
       style: styles.onlineText,
       containerStyle: styles.onlineContainer,
     };
@@ -68,9 +74,7 @@ export const NetworkStatusBar: React.FC = () => {
 
   return (
     <View style={[styles.container, status.containerStyle]}>
-      <Text style={[styles.text, status.style]} numberOfLines={1}>
-        {status.text}
-      </Text>
+      <Text style={[styles.text, status.style]}>{status.text}</Text>
     </View>
   );
 };
@@ -79,43 +83,46 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   text: {
     fontSize: 14,
-    fontWeight: '600',
-  },
-  offlineContainer: {
-    backgroundColor: '#FF3B30',
-  },
-  offlineText: {
-    color: '#FFFFFF',
-  },
-  warningContainer: {
-    backgroundColor: '#FF9500',
-  },
-  warningText: {
-    color: '#FFFFFF',
-  },
-  syncingContainer: {
-    backgroundColor: '#007AFF',
-  },
-  syncingText: {
-    color: '#FFFFFF',
+    fontWeight: "500",
+    textAlign: "center",
   },
   onlineContainer: {
-    backgroundColor: '#34C759',
+    backgroundColor: "#E8F5E9",
+    borderBottomColor: "#A5D6A7",
   },
   onlineText: {
-    color: '#FFFFFF',
+    color: "#2E7D32",
+  },
+  offlineContainer: {
+    backgroundColor: "#FFF3E0",
+    borderBottomColor: "#FFCC80",
+  },
+  offlineText: {
+    color: "#EF6C00",
+  },
+  warningContainer: {
+    backgroundColor: "#FFF3E0",
+    borderBottomColor: "#FFCC80",
+  },
+  warningText: {
+    color: "#EF6C00",
+  },
+  pendingContainer: {
+    backgroundColor: "#E3F2FD",
+    borderBottomColor: "#90CAF9",
+  },
+  pendingText: {
+    color: "#1565C0",
   },
   errorContainer: {
-    backgroundColor: '#FF2D55',
+    backgroundColor: "#FFEBEE",
+    borderBottomColor: "#EF9A9A",
   },
   errorText: {
-    color: '#FFFFFF',
+    color: "#C62828",
   },
 });
