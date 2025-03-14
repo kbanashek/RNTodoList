@@ -1,6 +1,30 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Task, TodoServiceConfig } from "../store/types";
 
+const SAMPLE_TASKS: Task[] = [
+  {
+    id: "sample_1",
+    title: "Welcome to Todo App! 👋",
+    completed: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "sample_2",
+    title: "✨ Try adding a new task above",
+    completed: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "sample_3",
+    title: "🔄 Works offline - changes sync automatically",
+    completed: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
 export class TodoService {
   private tasks: Task[] = [];
   private readonly STORAGE_KEY = "tasks";
@@ -10,50 +34,57 @@ export class TodoService {
   public async init(): Promise<{ tasks: Task[] }> {
     try {
       const storedTasks = await AsyncStorage.getItem(this.STORAGE_KEY);
+      
       if (storedTasks) {
         this.tasks = JSON.parse(storedTasks);
+      } else {
+        // Initialize with sample tasks if storage is empty
+        this.tasks = SAMPLE_TASKS;
+        await this.saveToStorage();
       }
+      
       return { tasks: this.tasks };
     } catch (error) {
       console.error("Error initializing tasks:", error);
-      return { tasks: [] };
+      // Return sample tasks as fallback
+      return { tasks: SAMPLE_TASKS };
     }
   }
 
   public async fetchTasks(): Promise<{ tasks: Task[] }> {
     try {
-      // Use the user-specific todos endpoint as per DummyJSON docs
       const response = await fetch(
         `${this.API_CONFIG.baseUrl}/todos/user/${this.API_CONFIG.userId}`
       );
+      
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
+      
       const data = await response.json();
 
-      // DummyJSON returns { todos: Task[], total: number, skip: number, limit: number }
       if (!data || !Array.isArray(data.todos)) {
-        console.warn("Invalid API response format, using local tasks");
         return { tasks: this.tasks };
       }
 
       // Map API response to our Task format
       const tasks = data.todos.map((task: any) => ({
-        id: task.id.toString(),
+        id: String(task.id),
         title: task.todo,
         completed: task.completed,
-        createdAt: new Date().toISOString(), // API doesn't provide timestamps
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }));
 
-      // Update local state and storage
-      this.tasks = tasks;
-      await this.saveToStorage();
+      // Only update if we got tasks from API
+      if (tasks.length > 0) {
+        this.tasks = tasks;
+        await this.saveToStorage();
+      }
 
       return { tasks: this.tasks };
     } catch (error) {
       console.error("Error fetching tasks:", error);
-      // On error, maintain offline-first approach by returning current tasks
       return { tasks: this.tasks };
     }
   }
@@ -63,7 +94,6 @@ export class TodoService {
       const now = new Date().toISOString();
       const taskId = this.generateId("task");
 
-      // Create new task locally
       const newTask: Task = {
         id: taskId,
         title,
@@ -72,7 +102,7 @@ export class TodoService {
         updatedAt: now,
       };
 
-      // Add task to beginning of list
+      // Add to beginning of list
       this.tasks.unshift(newTask);
       await this.saveToStorage();
 
@@ -94,14 +124,12 @@ export class TodoService {
         throw new Error(`Task not found: ${taskId}`);
       }
 
-      // Update task locally
       const updatedTask = {
         ...this.tasks[taskIndex],
         ...updates,
         updatedAt: new Date().toISOString(),
       };
 
-      // Update in local state
       this.tasks[taskIndex] = updatedTask;
       await this.saveToStorage();
 
@@ -120,7 +148,6 @@ export class TodoService {
         throw new Error(`Task not found: ${taskId}`);
       }
 
-      // Remove from local state
       this.tasks.splice(taskIndex, 1);
       await this.saveToStorage();
 

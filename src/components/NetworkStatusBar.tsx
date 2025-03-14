@@ -1,36 +1,39 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React from "react";
+import { StyleSheet } from "react-native";
+import { Surface, Text } from "react-native-paper";
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 export function NetworkStatusBar() {
-  const { isOffline, type } = useNetworkStatus();
+  const { isOffline } = useNetworkStatus();
 
   if (!isOffline) {
     return null;
   }
 
   return (
-    <View style={styles.container}>
+    <Surface style={styles.container}>
       <Text style={styles.text}>
-        {type === 'none' 
-          ? 'No network connection. Changes will be saved locally.'
-          : 'Limited connectivity. Changes will be saved locally.'}
+        📱 You are offline. Changes will sync when back online.
       </Text>
-    </View>
+    </Surface>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f5a623',
-    padding: 12,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0a020',
+    padding: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: '#1e1e1e',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#cf6679',
   },
   text: {
-    color: '#fff',
+    color: '#cf6679',
+    fontWeight: "500",
     fontSize: 14,
-    fontWeight: '500',
   },
 });

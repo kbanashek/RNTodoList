@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import { View, FlatList, StyleSheet } from "react-native";
+import { ActivityIndicator, Text } from "react-native-paper";
 import { Task } from "../store/types";
 import { TaskListItem } from "./TaskListItem";
 
@@ -32,8 +33,8 @@ export function TaskList({
   if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Loading tasks...</Text>
+        <ActivityIndicator animating size="large" color="#bb86fc" />
+        <Text style={styles.messageText}>Loading tasks...</Text>
       </View>
     );
   }
@@ -41,7 +42,19 @@ export function TaskList({
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Error: {error.message}</Text>
+        <Text style={[styles.messageText, styles.errorText]}>
+          Error: {error.message}
+        </Text>
+      </View>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.messageText}>
+          No tasks yet. Add your first task above!
+        </Text>
       </View>
     );
   }
@@ -50,7 +63,7 @@ export function TaskList({
     <View style={styles.container}>
       {isLoading && (
         <View style={styles.refreshIndicator}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator size="small" color="#bb86fc" />
           <Text style={styles.refreshText}>Refreshing...</Text>
         </View>
       )}
@@ -59,6 +72,7 @@ export function TaskList({
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -72,32 +86,36 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
   listContent: {
     flexGrow: 1,
+    paddingTop: 8,
     paddingBottom: 20,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#666",
-  },
-  errorText: {
-    color: "#d32f2f",
-    fontSize: 16,
-    textAlign: "center",
-    margin: 20,
   },
   refreshIndicator: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 10,
-    backgroundColor: "#f5f5f5",
+    padding: 8,
+    backgroundColor: '#1e1e1e',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 4,
+    elevation: 2,
+  },
+  messageText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#ffffff',
+    textAlign: 'center',
+  },
+  errorText: {
+    color: '#cf6679',
   },
   refreshText: {
-    marginLeft: 10,
-    color: "#666",
+    marginLeft: 8,
     fontSize: 14,
+    color: '#ffffff',
   },
 });
