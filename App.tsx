@@ -1,10 +1,10 @@
 import React from 'react';
-import { Provider as ReduxProvider } from 'react-redux';
-import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
-import { store } from './src/store/index';
+import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
+import { Provider as ReduxProvider } from 'react-redux';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Tasks } from './src/screens/Tasks';
+import { store } from './src/store';
 
 const theme = {
   ...MD3DarkTheme,
@@ -15,19 +15,17 @@ const theme = {
   },
 };
 
-export const App: React.FC = () => {
+export default function App() {
   return (
-    <ReduxProvider store={store}>
-      <PaperProvider theme={theme}>
-        <SafeAreaProvider>
-          <StatusBar barStyle="light-content" />
-          <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#121212' }}>
+        <StatusBar barStyle="light-content" backgroundColor="#121212" />
+        <ReduxProvider store={store}>
+          <PaperProvider theme={theme}>
             <Tasks />
-          </SafeAreaView>
-        </SafeAreaProvider>
-      </PaperProvider>
-    </ReduxProvider>
+          </PaperProvider>
+        </ReduxProvider>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
-};
-
-export default App;
+}

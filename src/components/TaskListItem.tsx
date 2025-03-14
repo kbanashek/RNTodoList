@@ -51,7 +51,6 @@ export function TaskListItem({
             status={task.completed ? "checked" : "unchecked"}
             onPress={() => onToggleComplete(task.id, !task.completed)}
             color="#bb86fc"
-            uncheckedColor="rgba(255, 255, 255, 0.7)"
           />
         </View>
         <View style={styles.middleContent}>
@@ -133,18 +132,18 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   checkboxContainer: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 20,
     marginRight: 4,
   },
   checkboxContainerCompleted: {
     borderColor: "#bb86fc",
-    backgroundColor: "rgba(187, 134, 252, 0.1)",
+    backgroundColor: "rgba(187, 134, 252, 0.15)",
   },
   middleContent: {
     flex: 1,

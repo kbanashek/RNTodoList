@@ -2,78 +2,78 @@
 
 A React Native todo list application built with offline-first architecture, providing seamless task management regardless of network connectivity.
 
+![alt text](image-1.png)
+
 ## Features
 
 ### Offline-First Architecture
 
 - **Local Storage**: Tasks are saved locally using AsyncStorage
-- **Background Sync**: Changes sync automatically when online
-- **Optimistic Updates**: UI updates immediately, syncs in background
-- **Conflict Resolution**: Local changes take priority over server data
+- **Initial Data**: Tasks initially fetched from DummyJSON API
+- **Local Operations**: All add/edit/delete operations handled locally
+- **Network Status**: Real-time connection monitoring
 - **Data Flow**:
-  1. Save changes to local storage first
+  1. Save changes to local storage
   2. Update UI immediately
-  3. Queue change for background sync
-  4. Retry failed operations automatically
-  5. Preserve local changes on conflicts
+  3. Maintain offline functionality
+  4. Show network status clearly
 
 ### Task Management
 
 - **Create Tasks**: Add new tasks that appear at the top of the list
-- **Edit Tasks**: Modify task titles and completion status
-- **Delete Tasks**: Remove tasks with proper sync handling
+- **Edit Tasks**: Modify task titles with save/cancel options
+- **Delete Tasks**: Remove tasks immediately
+- **Complete Tasks**: Toggle task completion with visual feedback
 - **Task Ordering**: Latest tasks appear first
 
 ### Network Status Detection
 
-- **Connection Types**: Detects WiFi, cellular, or no connection
-- **Internet Reachability**: Checks actual internet connectivity
-- **Status Updates**: Real-time status changes using Expo Network API
-- **Status Priority**:
-  1. Task Errors: Shows sync failures first
-  2. Pending Tasks: Shows active syncs
-  3. Network State: Shows connection status
+- **Connection Types**: Detects online/offline state
+- **Status Updates**: Adaptive polling (30s online, 5s offline)
 - **Visual Indicators**:
-  - Red: Sync errors
-  - Blue: Active syncing
-  - Orange: Limited/No connectivity
-  - Green: Fully online
+  - Clear offline status message
+  - Consistent dark theme styling
+  - Border indicators for status
 
-### Task Sync Status
+### UI/UX Features
 
-- **Real-Time Updates**: Immediate status feedback
-- **Status Types**:
-  - Online - All changes synced
-  - Limited Connectivity - Changes saved locally
-  - Offline Mode - Changes saved locally
-  - Syncing - Number of tasks being synced
-  - Sync Error - Number of failed tasks
+- **Dark Theme**: Modern dark color scheme
+- **Responsive Design**: Proper safe area handling
+- **Visual Feedback**:
+  - Task completion indicators
+  - Edit mode with save/cancel
+  - Network status updates
+- **Smooth Interactions**:
+  - Immediate local updates
+  - Clean checkbox animations
+  - Proper touch targets
 
-### Error Handling & Recovery
+## Technical Implementation
 
-- **Retry Logic**:
-  - Exponential backoff (1s base delay)
-  - Configurable max retries (default: 3)
-  - Automatic retry on network recovery
-- **Error States**:
-  - Task-level error tracking
-  - Detailed API error messages
-  - Sync failure indicators
-  - Network error detection
-- **Recovery Features**:
-  - Manual retry of failed operations
-  - Automatic background retry
-  - Error state preservation
-  - Conflict resolution
-- **Data Protection**:
-  - No data loss during errors
-  - Local changes preserved
-  - Sync state persistence
-  - Error message preservation
+### Core Libraries
+
+- **React Native**: Cross-platform mobile framework
+- **React Native Paper**: Material Design components
+- **AsyncStorage**: Local data persistence
+- **Redux**: State management
+- **TypeScript**: Type safety
+
+### Components
+
+- **Tasks**: Main screen with task management
+- **TaskList**: Renders tasks with loading states
+- **TaskListItem**: Individual task with edit/delete
+- **AddTaskForm**: New task creation
+- **NetworkStatusBar**: Connection status display
+
+### Architecture
+
+- **Offline-First**: All operations work without network
+- **Local State**: Redux + AsyncStorage for persistence
+- **Type Safety**: Full TypeScript implementation
+- **Component Structure**: Clean separation of concerns
 
 ## Running the App
-
-### Development Setup
 
 1. Install dependencies:
 
@@ -81,152 +81,34 @@ A React Native todo list application built with offline-first architecture, prov
    npm install
    ```
 
-2. Install Expo Go:
-   - iOS: [Download from App Store](https://apps.apple.com/app/apple-store/id982107779)
-   - Android: [Download from Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
-
-### Running on Expo Go
-
-1. Start the development server:
+2. Start the development server:
 
    ```bash
    npx expo start
    ```
 
-2. Connect your device:
+3. Run on iOS/Android:
+   - Use Expo Go app
+   - Or run in simulator/emulator
 
-   - Scan the QR code with your device's camera
-   - iOS: Use the Camera app
-   - Android: Use the Expo Go app
-   - Or press 'i' for iOS simulator / 'a' for Android emulator
+## Development Notes
 
-3. Development Options:
-   - Press 'r' to reload the app
-   - Press 'm' to toggle the menu
-   - Press 'w' to open in web browser
-   - Press 'j' to open debugger
+1. **Testing Offline Mode**:
 
-### Development Notes
-
-1. **Offline Storage**:
-
-   - Changes persist between app restarts
-   - Uses AsyncStorage for local data
-   - To clear data: uninstall and reinstall app
-   - Or clear app data in device settings
-
-2. **Network Testing**:
-
-   - Enable Airplane Mode to test offline mode
-   - Use Network Link Conditioner for poor connectivity
-   - Check sync status in NetworkStatusBar
-   - Monitor console logs for sync events
-
-3. **Development Tips**:
-
-   - Watch NetworkStatusBar for state changes
-   - Check task sync status indicators
-   - Monitor pending changes queue
-   - Test error recovery scenarios
-
-4. **Debugging**:
-   - Enable Remote JS Debugging for logs
-   - Use React DevTools for component inspection
-   - Check AsyncStorage data in debugger
-   - Monitor network requests in debugger
-
-## Testing Offline Functionality
-
-1. **Add Tasks While Online**:
-
-   - Add several tasks to see them sync
-   - Notice the "Online - All changes synced" status
-
-2. **Test Offline Mode**:
-
-   - Enable Airplane Mode on your device
+   - Enable Airplane Mode
    - Add/edit/delete tasks
-   - Notice "Offline Mode" status
-   - Changes are saved locally
+   - Verify local persistence
+   - Check network status updates
 
-3. **Restore Connection**:
+2. **UI Testing**:
 
-   - Disable Airplane Mode
-   - Watch tasks sync automatically
-   - Status changes to "Syncing" then "Online"
+   - Verify safe areas on iOS/Android
+   - Check dark theme consistency
+   - Test task interactions
+   - Monitor network status changes
 
-4. **Test Limited Connectivity**:
-
-   - Connect to a network without internet
-   - Notice "Limited Connectivity" status
-   - Changes still save locally
-   - Syncs when internet is available
-
-5. **Error Handling**:
-   - If sync fails, tasks show error state
-   - Click to retry failed operations
-   - Error details visible in status bar
-
-## Technical Implementation
-
-### Type System
-
-- **Core Types**:
-  - `Task`: Todo item with sync status
-  - `NetworkStatus`: Enum for connection states
-  - `PendingChange`: Offline change tracking
-  - `NetworkState`: Connection state tracking
-- **Type Safety**:
-  - Full TypeScript coverage
-  - Strict null checks
-  - Enum-based status tracking
-  - Interface-based contracts
-
-### Architecture
-
-- **React Native**: Cross-platform mobile support
-- **Expo Network API**: Reliable network status detection
-- **AsyncStorage**: Reliable local data persistence
-- **Queue System**: Robust change tracking and sync
-
-### Components
-
-- **NetworkStatusBar**:
-  - Network and sync status display
-  - Priority-based status messages
-  - Visual state indicators
-- **TaskList**:
-  - Ordered task display
-  - Sync status integration
-  - Error state handling
-- **AddTaskForm**:
-  - Task creation
-  - Offline support
-  - Immediate feedback
-- **TaskListItem**:
-  - Individual task display
-  - Sync status indicators
-  - Error state handling
-
-### Data Synchronization
-
-- **Change Queue**:
-  - Ordered by timestamp
-  - Preserves operation order
-  - Handles conflicts
-  - Retries failed changes
-- **Merge Strategy**:
-  1. Local changes take priority
-  2. Server changes merge if no conflict
-  3. Duplicates prevented by title
-  4. Sync status preserved
-- **Background Operations**:
-  - Automatic sync on connection
-  - Periodic sync attempts
-  - Silent error recovery
-  - State persistence
-- **Conflict Resolution**:
-  - Local changes never lost
-  - Server changes merge when safe
-  - Clear status indicators
-  - Manual resolution options
+3. **Data Management**:
+   - Changes persist in AsyncStorage
+   - Initial data from DummyJSON
+   - Local operations only
+   - Clear network status indication

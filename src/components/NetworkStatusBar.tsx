@@ -1,6 +1,6 @@
-import React from "react";
-import { StyleSheet } from "react-native";
-import { Surface, Text } from "react-native-paper";
+import React from 'react';
+import { StyleSheet } from 'react-native';
+import { Surface, Text } from 'react-native-paper';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 export function NetworkStatusBar() {
@@ -22,8 +22,8 @@ export function NetworkStatusBar() {
 const styles = StyleSheet.create({
   container: {
     padding: 8,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#1e1e1e',
     marginHorizontal: 16,
     marginBottom: 8,
@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   },
   text: {
     color: '#cf6679',
-    fontWeight: "500",
+    fontWeight: '500',
     fontSize: 14,
   },
 });
