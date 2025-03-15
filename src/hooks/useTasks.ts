@@ -1,43 +1,57 @@
 import { useCallback, useEffect, useState } from "react";
 import { Task } from "../store/types";
 import { TodoService } from "../services/todoService";
+import { useNetworkStatus } from "./useNetworkStatus";
 
-// Initialize with default config
-const todoService = new TodoService({
-  baseUrl: "https://dummyjson.com",
-  userId: 20,
-});
-
-interface TasksState {
+interface State {
   tasks: Task[];
   isLoading: boolean;
+  loadingTaskIds: Set<string>;
   error: Error | null;
 }
 
+const initialState: State = {
+  tasks: [],
+  isLoading: true,
+  loadingTaskIds: new Set(),
+  error: null,
+};
+
+const todoService = new TodoService({
+  baseUrl: "https://dummyjson.com",
+  userId: 1,
+});
+
 export function useTasks() {
-  const [state, setState] = useState<TasksState>({
-    tasks: [],
-    isLoading: true,
-    error: null,
-  });
+  const [state, setState] = useState<State>(initialState);
+  const networkStatus = useNetworkStatus();
+  const isOnline = !networkStatus.isOffline && networkStatus.isInternetReachable;
 
   const loadTasks = useCallback(async () => {
     try {
-      // First load from storage
+      // First load from local storage
       const localResult = await todoService.init();
       setState((prev) => ({
         ...prev,
         tasks: localResult.tasks,
       }));
 
-      // Then try to fetch and merge with API data
-      const apiResult = await todoService.fetchTasks();
-      setState((prev) => ({
-        ...prev,
-        tasks: apiResult.tasks,
-        isLoading: false,
-        error: null,
-      }));
+      // Then fetch from API if online
+      if (isOnline) {
+        const apiResult = await todoService.fetchTasks();
+        setState((prev) => ({
+          ...prev,
+          tasks: apiResult.tasks,
+          isLoading: false,
+          error: null,
+        }));
+      } else {
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: null,
+        }));
+      }
     } catch (error) {
       console.error("Error loading tasks:", error);
       setState((prev) => ({
@@ -46,7 +60,7 @@ export function useTasks() {
         error: error as Error,
       }));
     }
-  }, []);
+  }, [isOnline]);
 
   const addTask = useCallback(async (title: string) => {
     try {
@@ -54,10 +68,8 @@ export function useTasks() {
       setState((prev) => ({
         ...prev,
         tasks: result.tasks,
-        error: null,
       }));
     } catch (error) {
-      console.error("Error adding task:", error);
       setState((prev) => ({
         ...prev,
         error: error as Error,
@@ -67,35 +79,63 @@ export function useTasks() {
 
   const editTask = useCallback(async (taskId: string, updates: Partial<Task>) => {
     try {
+      setState((prev) => ({
+        ...prev,
+        loadingTaskIds: new Set(prev.loadingTaskIds).add(taskId),
+      }));
+
       const result = await todoService.editTask(taskId, updates);
-      setState((prev) => ({
-        ...prev,
-        tasks: result.tasks,
-        error: null,
-      }));
+      
+      setState((prev) => {
+        const loadingTaskIds = new Set(prev.loadingTaskIds);
+        loadingTaskIds.delete(taskId);
+        return {
+          ...prev,
+          tasks: result.tasks,
+          loadingTaskIds,
+        };
+      });
     } catch (error) {
-      console.error("Error editing task:", error);
-      setState((prev) => ({
-        ...prev,
-        error: error as Error,
-      }));
+      setState((prev) => {
+        const loadingTaskIds = new Set(prev.loadingTaskIds);
+        loadingTaskIds.delete(taskId);
+        return {
+          ...prev,
+          loadingTaskIds,
+          error: error as Error,
+        };
+      });
     }
   }, []);
 
   const deleteTask = useCallback(async (taskId: string) => {
     try {
+      setState((prev) => ({
+        ...prev,
+        loadingTaskIds: new Set(prev.loadingTaskIds).add(taskId),
+      }));
+
       const result = await todoService.deleteTask(taskId);
-      setState((prev) => ({
-        ...prev,
-        tasks: result.tasks,
-        error: null,
-      }));
+      
+      setState((prev) => {
+        const loadingTaskIds = new Set(prev.loadingTaskIds);
+        loadingTaskIds.delete(taskId);
+        return {
+          ...prev,
+          tasks: result.tasks,
+          loadingTaskIds,
+        };
+      });
     } catch (error) {
-      console.error("Error deleting task:", error);
-      setState((prev) => ({
-        ...prev,
-        error: error as Error,
-      }));
+      setState((prev) => {
+        const loadingTaskIds = new Set(prev.loadingTaskIds);
+        loadingTaskIds.delete(taskId);
+        return {
+          ...prev,
+          loadingTaskIds,
+          error: error as Error,
+        };
+      });
     }
   }, []);
 
@@ -106,10 +146,11 @@ export function useTasks() {
   return {
     tasks: state.tasks,
     isLoading: state.isLoading,
+    loadingTaskIds: state.loadingTaskIds,
     error: state.error,
     addTask,
     editTask,
     deleteTask,
-    reloadTasks: loadTasks,
+    loadTasks,
   };
 }

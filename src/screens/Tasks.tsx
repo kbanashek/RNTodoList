@@ -7,28 +7,33 @@ import { TaskList } from '../components/TaskList';
 import { useTasks } from '../hooks/useTasks';
 
 export function Tasks() {
-  const { tasks, isLoading, error, addTask, editTask, deleteTask } = useTasks();
-
-  const handleToggleComplete = (taskId: string, completed: boolean) => {
-    editTask(taskId, { completed });
-  };
-
-  const handleEditTask = (taskId: string, title: string) => {
-    editTask(taskId, { title });
-  };
+  const {
+    tasks,
+    isLoading,
+    loadingTaskIds,
+    error,
+    addTask,
+    editTask,
+    deleteTask,
+  } = useTasks();
 
   return (
     <View style={styles.container}>
       <NetworkStatusBar />
-      <Text variant="headlineLarge" style={styles.title}>My Todos</Text>
-      <AddTaskForm onSubmit={addTask} />
+      <View style={styles.header}>
+        <Text style={styles.title}>Todo List</Text>
+        <AddTaskForm onSubmit={addTask} />
+      </View>
       <TaskList
         tasks={tasks}
         isLoading={isLoading}
+        loadingTaskIds={loadingTaskIds}
         error={error}
-        onToggleComplete={handleToggleComplete}
+        onToggleComplete={(taskId, completed) =>
+          editTask(taskId, { completed })
+        }
         onDeleteTask={deleteTask}
-        onEditTask={handleEditTask}
+        onEditTask={(taskId, title) => editTask(taskId, { title })}
       />
     </View>
   );
@@ -39,9 +44,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212',
   },
+  header: {
+    padding: 16,
+    paddingTop: 24,
+  },
   title: {
+    fontSize: 32,
+    fontWeight: 'bold',
     color: '#ffffff',
-    marginHorizontal: 16,
-    marginVertical: 16,
+    marginBottom: 16,
   },
 });

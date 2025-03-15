@@ -1,22 +1,16 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Task, TodoServiceConfig } from "../store/types";
+import { TaskStorage } from "../storage";
 
 export class TodoService {
   private tasks: Task[] = [];
-  private readonly STORAGE_KEY = "@TodoApp:tasks";
   private hasLoadedFromStorage = false;
 
   constructor(private readonly API_CONFIG: TodoServiceConfig) {}
 
   public async init(): Promise<{ tasks: Task[] }> {
     try {
-      const storedTasks = await AsyncStorage.getItem(this.STORAGE_KEY);
-      
-      if (storedTasks) {
-        this.tasks = JSON.parse(storedTasks);
-        this.hasLoadedFromStorage = true;
-      }
-      
+      this.tasks = await TaskStorage.getTasks();
+      this.hasLoadedFromStorage = true;
       return { tasks: this.tasks };
     } catch (error) {
       console.error("Error initializing tasks:", error);
@@ -60,7 +54,7 @@ export class TodoService {
       this.tasks = [...localTasks, ...apiTasks];
 
       // Save merged tasks to storage
-      await this.saveToStorage();
+      await TaskStorage.saveTasks(this.tasks);
       return { tasks: this.tasks };
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -83,7 +77,7 @@ export class TodoService {
 
       // Add to beginning of list
       this.tasks.unshift(newTask);
-      await this.saveToStorage();
+      await TaskStorage.saveTasks(this.tasks);
 
       return { tasks: this.tasks };
     } catch (error) {
@@ -110,7 +104,7 @@ export class TodoService {
       };
 
       this.tasks[taskIndex] = updatedTask;
-      await this.saveToStorage();
+      await TaskStorage.saveTasks(this.tasks);
 
       return { tasks: this.tasks };
     } catch (error) {
@@ -128,7 +122,7 @@ export class TodoService {
       }
 
       this.tasks.splice(taskIndex, 1);
-      await this.saveToStorage();
+      await TaskStorage.saveTasks(this.tasks);
 
       return { tasks: this.tasks };
     } catch (error) {
@@ -141,18 +135,9 @@ export class TodoService {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  private async saveToStorage(): Promise<void> {
-    try {
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.tasks));
-    } catch (error) {
-      console.error("Error saving to storage:", error);
-      throw error;
-    }
-  }
-
   public async clearStorage(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(this.STORAGE_KEY);
+      await TaskStorage.clearTasks();
       this.tasks = [];
       this.hasLoadedFromStorage = false;
     } catch (error) {

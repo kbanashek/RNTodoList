@@ -2,43 +2,45 @@ import { useCallback, useEffect, useState } from "react";
 import * as Network from "expo-network";
 import { NetworkState, NetworkType } from "../store/types";
 
-const ONLINE_CHECK_INTERVAL = 30000; // 30 seconds
-const OFFLINE_CHECK_INTERVAL = 5000; // 5 seconds
-
-// Map Expo network types to our NetworkType
-function mapNetworkType(type: Network.NetworkStateType): NetworkType {
-  switch (type) {
-    case Network.NetworkStateType.NONE:
-      return "none";
-    case Network.NetworkStateType.CELLULAR:
-      return "cellular";
-    case Network.NetworkStateType.WIFI:
-      return "wifi";
-    case Network.NetworkStateType.BLUETOOTH:
-      return "bluetooth";
-    case Network.NetworkStateType.ETHERNET:
-      return "ethernet";
-    case Network.NetworkStateType.VPN:
-      return "vpn";
-    case Network.NetworkStateType.OTHER:
-      return "other";
-    default:
-      return "unknown";
-  }
-}
+const initialState: NetworkState = {
+  isOffline: true,
+  isConnected: false,
+  isInternetReachable: false,
+  type: NetworkType.NONE,
+  lastChecked: new Date().toISOString(),
+};
 
 export function useNetworkStatus() {
-  const [networkState, setNetworkState] = useState<NetworkState>({
-    isConnected: false, // Default to false for offline-first approach
-    isInternetReachable: false,
-    type: "none",
-    lastChecked: new Date().toISOString(),
-  });
+  const [state, setState] = useState<NetworkState>(initialState);
+
+  const mapNetworkType = (type: Network.NetworkStateType): NetworkType => {
+    switch (type) {
+      case Network.NetworkStateType.NONE:
+        return NetworkType.NONE;
+      case Network.NetworkStateType.CELLULAR:
+        return NetworkType.CELLULAR;
+      case Network.NetworkStateType.WIFI:
+        return NetworkType.WIFI;
+      case Network.NetworkStateType.BLUETOOTH:
+        return NetworkType.BLUETOOTH;
+      case Network.NetworkStateType.ETHERNET:
+        return NetworkType.ETHERNET;
+      case Network.NetworkStateType.VPN:
+        return NetworkType.VPN;
+      case Network.NetworkStateType.OTHER:
+        return NetworkType.OTHER;
+      case Network.NetworkStateType.UNKNOWN:
+      default:
+        return NetworkType.UNKNOWN;
+    }
+  };
 
   const checkNetworkStatus = useCallback(async () => {
     try {
       const networkState = await Network.getNetworkStateAsync();
-      setNetworkState({
+      
+      setState({
+        isOffline: !networkState.isConnected || !networkState.isInternetReachable,
         isConnected: networkState.isConnected,
         isInternetReachable: networkState.isInternetReachable ?? false,
         type: mapNetworkType(networkState.type),
@@ -46,51 +48,22 @@ export function useNetworkStatus() {
       });
     } catch (error) {
       console.error("Error checking network status:", error);
-      setNetworkState(prev => ({
+      setState(prev => ({
         ...prev,
+        isOffline: true,
         isConnected: false,
         isInternetReachable: false,
-        type: "none",
+        type: NetworkType.NONE,
         lastChecked: new Date().toISOString(),
       }));
     }
   }, []);
 
-  // Initial check on mount
   useEffect(() => {
     checkNetworkStatus();
+    const interval = setInterval(checkNetworkStatus, 30000); // Check every 30s
+    return () => clearInterval(interval);
   }, [checkNetworkStatus]);
 
-  // Polling effect
-  useEffect(() => {
-    let mounted = true;
-    let timeoutId: NodeJS.Timeout;
-
-    const checkWithBackoff = async () => {
-      if (!mounted) return;
-
-      await checkNetworkStatus();
-
-      // Use shorter polling interval when offline
-      const interval = networkState.isConnected && networkState.isInternetReachable
-        ? ONLINE_CHECK_INTERVAL
-        : OFFLINE_CHECK_INTERVAL;
-
-      timeoutId = setTimeout(checkWithBackoff, interval);
-    };
-
-    // Start polling
-    timeoutId = setTimeout(checkWithBackoff, networkState.isConnected ? ONLINE_CHECK_INTERVAL : OFFLINE_CHECK_INTERVAL);
-
-    return () => {
-      mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [checkNetworkStatus, networkState.isConnected, networkState.isInternetReachable]);
-
-  return {
-    ...networkState,
-    checkNetworkStatus,
-    isOffline: !networkState.isConnected || !networkState.isInternetReachable,
-  };
+  return state;
 }

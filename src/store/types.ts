@@ -1,14 +1,16 @@
-export type NetworkType = 
-  | "none"      // No connection
-  | "unknown"   // Status not yet determined
-  | "cellular"  // Mobile data
-  | "wifi"      // WiFi connection
-  | "bluetooth" // Bluetooth connection
-  | "ethernet"  // Wired connection
-  | "vpn"       // VPN connection
-  | "other";    // Other connection types
+export enum NetworkType {
+  NONE = "NONE",
+  UNKNOWN = "UNKNOWN",
+  CELLULAR = "CELLULAR",
+  WIFI = "WIFI",
+  BLUETOOTH = "BLUETOOTH",
+  ETHERNET = "ETHERNET",
+  VPN = "VPN",
+  OTHER = "OTHER",
+}
 
 export interface NetworkState {
+  isOffline: boolean;
   isConnected: boolean;
   isInternetReachable: boolean;
   type: NetworkType;

@@ -6,11 +6,13 @@ import {
   IconButton,
   TextInput,
   Text,
+  ActivityIndicator,
 } from "react-native-paper";
 import { Task } from "../store/types";
 
 interface TaskListItemProps {
   task: Task;
+  isLoading?: boolean;
   onToggleComplete: (taskId: string, completed: boolean) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask: (taskId: string, title: string) => void;
@@ -18,6 +20,7 @@ interface TaskListItemProps {
 
 export function TaskListItem({
   task,
+  isLoading = false,
   onToggleComplete,
   onDeleteTask,
   onEditTask,
@@ -47,11 +50,16 @@ export function TaskListItem({
             task.completed && styles.checkboxContainerCompleted,
           ]}
         >
-          <Checkbox
-            status={task.completed ? "checked" : "unchecked"}
-            onPress={() => onToggleComplete(task.id, !task.completed)}
-            color="#bb86fc"
-          />
+          {isLoading ? (
+            <ActivityIndicator size={20} color="#bb86fc" />
+          ) : (
+            <Checkbox
+              status={task.completed ? "checked" : "unchecked"}
+              onPress={() => onToggleComplete(task.id, !task.completed)}
+              color="#bb86fc"
+              disabled={isLoading}
+            />
+          )}
         </View>
         <View style={styles.middleContent}>
           {isEditing ? (
@@ -65,15 +73,20 @@ export function TaskListItem({
               textColor="#ffffff"
               underlineColor="transparent"
               activeUnderlineColor="#bb86fc"
+              disabled={isLoading}
               right={
                 <TextInput.Icon
                   icon="check"
                   onPress={handleSave}
                   disabled={
-                    !editedTitle.trim() || editedTitle.trim() === task.title
+                    isLoading ||
+                    !editedTitle.trim() ||
+                    editedTitle.trim() === task.title
                   }
                   color={
-                    !editedTitle.trim() || editedTitle.trim() === task.title
+                    isLoading ||
+                    !editedTitle.trim() ||
+                    editedTitle.trim() === task.title
                       ? "rgba(255, 255, 255, 0.3)"
                       : "#bb86fc"
                   }
@@ -82,7 +95,11 @@ export function TaskListItem({
             />
           ) : (
             <Text
-              style={[styles.title, task.completed && styles.completedTitle]}
+              style={[
+                styles.title,
+                task.completed && styles.completedTitle,
+                isLoading && styles.loadingTitle,
+              ]}
               numberOfLines={2}
             >
               {task.title}
@@ -96,6 +113,7 @@ export function TaskListItem({
               onPress={handleCancel}
               iconColor="#cf6679"
               size={20}
+              disabled={isLoading}
             />
           ) : (
             <>
@@ -104,12 +122,14 @@ export function TaskListItem({
                 onPress={() => setIsEditing(true)}
                 iconColor="#bb86fc"
                 size={20}
+                disabled={isLoading}
               />
               <IconButton
                 icon="delete"
                 onPress={() => onDeleteTask(task.id)}
                 iconColor="#cf6679"
                 size={20}
+                disabled={isLoading}
               />
             </>
           )}
@@ -157,6 +177,9 @@ const styles = StyleSheet.create({
   completedTitle: {
     textDecorationLine: "line-through",
     opacity: 0.7,
+  },
+  loadingTitle: {
+    opacity: 0.5,
   },
   input: {
     flex: 1,
