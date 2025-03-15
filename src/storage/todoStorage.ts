@@ -1,10 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Task } from "../store/types";
+import { Todo } from "../store/types";
 
 const STORAGE_KEY = "@TodoApp:tasks";
 
 export class TodoStorage {
-  static async getTasks(): Promise<Task[]> {
+  static async getTasks(): Promise<Todo[]> {
     try {
       const storedTasks = await AsyncStorage.getItem(STORAGE_KEY);
       return storedTasks ? JSON.parse(storedTasks) : [];
@@ -14,7 +14,7 @@ export class TodoStorage {
     }
   }
 
-  static async saveTasks(tasks: Task[]): Promise<void> {
+  static async saveTasks(tasks: Todo[]): Promise<void> {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
     } catch (error) {

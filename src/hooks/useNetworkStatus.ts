@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import * as Network from "expo-network";
 import { NetworkState, NetworkType } from "../store/types";
+import { NETWORK_POLLING_ONLINE, NETWORK_POLLING_OFFLINE } from "@env";
 
 const initialState: NetworkState = {
   isOffline: true,
@@ -61,9 +62,12 @@ export function useNetworkStatus() {
 
   useEffect(() => {
     checkNetworkStatus();
-    const interval = setInterval(checkNetworkStatus, 30000); // Check every 30s
+    const pollingInterval = state.isOffline 
+      ? parseInt(NETWORK_POLLING_OFFLINE, 10) 
+      : parseInt(NETWORK_POLLING_ONLINE, 10);
+    const interval = setInterval(checkNetworkStatus, pollingInterval);
     return () => clearInterval(interval);
-  }, [checkNetworkStatus]);
+  }, [checkNetworkStatus, state.isOffline]);
 
   return state;
 }

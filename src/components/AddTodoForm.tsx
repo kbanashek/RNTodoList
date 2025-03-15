@@ -3,19 +3,28 @@ import { StyleSheet, View } from "react-native";
 import { TextInput } from "react-native-paper";
 
 interface AddTodoFormProps {
-  onSubmit: (title: string) => void;
+  onSubmit: (title: string) => Promise<void>;
+  isLoading?: boolean;
 }
 
-export const AddTodoForm = ({ onSubmit }: AddTodoFormProps) => {
+export function AddTodoForm({ onSubmit, isLoading = false }: AddTodoFormProps) {
   const [title, setTitle] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmedTitle = title.trim();
-    if (trimmedTitle) {
-      onSubmit(trimmedTitle);
-      setTitle("");
+    if (trimmedTitle && !isSubmitting) {
+      try {
+        setIsSubmitting(true);
+        await onSubmit(trimmedTitle);
+        setTitle("");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
+
+  const disabled = isLoading || isSubmitting || !title.trim();
 
   return (
     <View style={styles.container}>
@@ -30,18 +39,19 @@ export const AddTodoForm = ({ onSubmit }: AddTodoFormProps) => {
         textColor="#ffffff"
         outlineColor="rgba(255, 255, 255, 0.2)"
         activeOutlineColor="#bb86fc"
+        disabled={isLoading || isSubmitting}
         right={
           <TextInput.Icon
-            icon="plus"
+            icon={isSubmitting ? "loading" : "plus"}
             onPress={handleSubmit}
-            disabled={!title.trim()}
-            color={!title.trim() ? "rgba(255, 255, 255, 0.3)" : "#bb86fc"}
+            disabled={disabled}
+            color={disabled ? "rgba(255, 255, 255, 0.3)" : "#bb86fc"}
           />
         }
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {

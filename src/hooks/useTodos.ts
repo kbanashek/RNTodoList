@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Task } from "../store/types";
+import { Todo } from "../store/types";
 import { TodoService } from "../services/todoService";
 import { useNetworkStatus } from "./useNetworkStatus";
 import { API_BASE_URL, USER_ID } from "@env";
 
 interface State {
-  todos: Task[];
+  todos: Todo[];
   isLoading: boolean;
   loadingTodoIds: Set<string>;
   error: Error | null;
@@ -41,7 +41,7 @@ export function useTodos() {
 
       // Then fetch from API if online
       if (isOnline) {
-        const apiResult = await todoService.fetchTasks();
+        const apiResult = await todoService.fetchTodos();
         setState((prev) => ({
           ...prev,
           todos: apiResult.tasks,
@@ -67,7 +67,7 @@ export function useTodos() {
 
   const addTodo = useCallback(async (title: string) => {
     try {
-      const result = await todoService.addTask(title);
+      const result = await todoService.addTodo(title);
       setState((prev) => ({
         ...prev,
         todos: result.tasks,
@@ -81,14 +81,14 @@ export function useTodos() {
   }, []);
 
   const editTodo = useCallback(
-    async (todoId: string, updates: Partial<Task>) => {
+    async (todoId: string, updates: Partial<Todo>) => {
       try {
         setState((prev) => ({
           ...prev,
           loadingTodoIds: new Set(prev.loadingTodoIds).add(todoId),
         }));
 
-        const result = await todoService.editTask(todoId, updates);
+        const result = await todoService.editTodo(todoId, updates);
 
         setState((prev) => {
           const loadingTodoIds = new Set(prev.loadingTodoIds);
@@ -121,7 +121,7 @@ export function useTodos() {
         loadingTodoIds: new Set(prev.loadingTodoIds).add(todoId),
       }));
 
-      const result = await todoService.deleteTask(todoId);
+      const result = await todoService.deleteTodo(todoId);
 
       setState((prev) => {
         const loadingTodoIds = new Set(prev.loadingTodoIds);

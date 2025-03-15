@@ -1,33 +1,33 @@
 import React from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { ActivityIndicator, Text } from "react-native-paper";
-import { Task } from "../store/types";
+import { Todo } from "../store/types";
 import { TodoListItem } from "./TodoListItem";
 
-interface TaskListProps {
-  tasks: Task[];
+interface TodoListProps {
+  todos: Todo[];
   isLoading: boolean;
-  loadingTaskIds: Set<string>;
+  loadingTodoIds: Set<string>;
   error: Error | null;
-  onToggleComplete: (taskId: string, completed: boolean) => void;
-  onDeleteTask: (taskId: string) => void;
-  onEditTask: (taskId: string, title: string) => void;
+  onToggleComplete: (todoId: string, completed: boolean) => void;
+  onDeleteTodo: (todoId: string) => void;
+  onEditTodo: (todoId: string, title: string) => void;
 }
 
 export function TodoList({
-  tasks,
+  todos,
   isLoading,
-  loadingTaskIds,
+  loadingTodoIds,
   error,
   onToggleComplete,
-  onDeleteTask,
-  onEditTask,
-}: TaskListProps) {
-  if (isLoading && tasks.length === 0) {
+  onDeleteTodo,
+  onEditTodo,
+}: TodoListProps) {
+  if (isLoading && todos.length === 0) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#bb86fc" />
-        <Text style={styles.messageText}>Loading tasks...</Text>
+        <Text style={styles.messageText}>Loading todos...</Text>
       </View>
     );
   }
@@ -42,25 +42,25 @@ export function TodoList({
     );
   }
 
-  if (tasks.length === 0) {
+  if (todos.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>No tasks yet. Add one above!</Text>
+        <Text style={styles.emptyText}>No todos yet. Add one above!</Text>
       </View>
     );
   }
 
   return (
     <FlatList
-      data={tasks}
+      data={todos}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
         <TodoListItem
-          task={item}
-          isLoading={loadingTaskIds.has(item.id)}
+          todo={item}
+          isLoading={loadingTodoIds.has(item.id)}
           onToggleComplete={onToggleComplete}
-          onDeleteTask={onDeleteTask}
-          onEditTask={onEditTask}
+          onDeleteTodo={onDeleteTodo}
+          onEditTodo={onEditTodo}
         />
       )}
       style={styles.list}

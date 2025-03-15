@@ -17,7 +17,7 @@ export interface NetworkState {
   lastChecked: string;
 }
 
-export interface Task {
+export interface Todo {
   id: string;
   title: string;
   completed: boolean;
@@ -30,12 +30,12 @@ export interface TodoServiceConfig {
   userId: number;
 }
 
-export interface TasksState {
-  tasks: Task[];
+export interface TodoState {
+  tasks: Todo[];
   editingTaskId: string | null;
   network: NetworkState;
 }
 
 export interface RootState {
-  tasks: TasksState;
+  tasks: TodoState;
 }
