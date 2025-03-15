@@ -3,7 +3,7 @@ import { Task } from "../store/types";
 
 const STORAGE_KEY = "@TodoApp:tasks";
 
-export class TaskStorage {
+export class TodoStorage {
   static async getTasks(): Promise<Task[]> {
     try {
       const storedTasks = await AsyncStorage.getItem(STORAGE_KEY);

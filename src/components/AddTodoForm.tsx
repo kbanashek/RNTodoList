@@ -1,27 +1,19 @@
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { TextInput, IconButton } from "react-native-paper";
+import { TextInput } from "react-native-paper";
 
-interface AddTaskFormProps {
+interface AddTodoFormProps {
   onSubmit: (title: string) => void;
 }
 
-export function AddTaskForm({ onSubmit }: AddTaskFormProps) {
+export const AddTodoForm = ({ onSubmit }: AddTodoFormProps) => {
   const [title, setTitle] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const trimmedTitle = title.trim();
-    if (trimmedTitle && !isSubmitting) {
-      try {
-        setIsSubmitting(true);
-        await onSubmit(trimmedTitle);
-        setTitle("");
-      } catch (error) {
-        console.error("Error submitting task:", error);
-      } finally {
-        setIsSubmitting(false);
-      }
+    if (trimmedTitle) {
+      onSubmit(trimmedTitle);
+      setTitle("");
     }
   };
 
@@ -31,7 +23,7 @@ export function AddTaskForm({ onSubmit }: AddTaskFormProps) {
         value={title}
         onChangeText={setTitle}
         onSubmitEditing={handleSubmit}
-        placeholder="Add a new task..."
+        placeholder="Add a new todo..."
         placeholderTextColor="rgba(255, 255, 255, 0.5)"
         style={styles.input}
         mode="outlined"
@@ -42,24 +34,20 @@ export function AddTaskForm({ onSubmit }: AddTaskFormProps) {
           <TextInput.Icon
             icon="plus"
             onPress={handleSubmit}
-            disabled={!title.trim() || isSubmitting}
-            color={!title.trim() || isSubmitting ? "rgba(255, 255, 255, 0.3)" : "#bb86fc"}
+            disabled={!title.trim()}
+            color={!title.trim() ? "rgba(255, 255, 255, 0.3)" : "#bb86fc"}
           />
         }
-        disabled={isSubmitting}
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
   },
   input: {
     backgroundColor: "transparent",
-    fontSize: 16,
   },
 });

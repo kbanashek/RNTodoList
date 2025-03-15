@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   Card,
-  Checkbox,
   IconButton,
   TextInput,
   Text,
   ActivityIndicator,
 } from "react-native-paper";
 import { Task } from "../store/types";
+import { CustomCheckbox } from "./CustomCheckbox";
 
 interface TaskListItemProps {
   task: Task;
@@ -18,7 +18,7 @@ interface TaskListItemProps {
   onEditTask: (taskId: string, title: string) => void;
 }
 
-export function TaskListItem({
+export function TodoListItem({
   task,
   isLoading = false,
   onToggleComplete,
@@ -44,20 +44,15 @@ export function TaskListItem({
   return (
     <Card style={styles.container}>
       <View style={styles.content}>
-        <View
-          style={[
-            styles.checkboxContainer,
-            task.completed && styles.checkboxContainerCompleted,
-          ]}
-        >
+        <View style={styles.checkboxContainer}>
           {isLoading ? (
-            <ActivityIndicator size={20} color="#bb86fc" />
+            <ActivityIndicator size={32} color="#bb86fc" />
           ) : (
-            <Checkbox
-              status={task.completed ? "checked" : "unchecked"}
+            <CustomCheckbox
+              checked={task.completed}
               onPress={() => onToggleComplete(task.id, !task.completed)}
-              color="#bb86fc"
               disabled={isLoading}
+              color="#bb86fc"
             />
           )}
         </View>
@@ -141,8 +136,8 @@ export function TaskListItem({
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 16,
-    marginVertical: 4,
+    marginHorizontal: 24,
+    marginVertical: 8,
     backgroundColor: "#333333",
     elevation: 2,
     borderRadius: 8,
@@ -150,25 +145,17 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
+    padding: 16,
   },
   checkboxContainer: {
     width: 40,
-    height: 40,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 20,
-    marginRight: 4,
-  },
-  checkboxContainerCompleted: {
-    borderColor: "#bb86fc",
-    backgroundColor: "rgba(187, 134, 252, 0.15)",
+    marginRight: 12,
   },
   middleContent: {
     flex: 1,
-    marginHorizontal: 8,
+    marginHorizontal: 12,
   },
   title: {
     fontSize: 16,

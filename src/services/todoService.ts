@@ -1,5 +1,5 @@
 import { Task, TodoServiceConfig } from "../store/types";
-import { TaskStorage } from "../storage";
+import { TodoStorage } from "../storage";
 
 export class TodoService {
   private tasks: Task[] = [];
@@ -9,7 +9,7 @@ export class TodoService {
 
   public async init(): Promise<{ tasks: Task[] }> {
     try {
-      this.tasks = await TaskStorage.getTasks();
+      this.tasks = await TodoStorage.getTasks();
       this.hasLoadedFromStorage = true;
       return { tasks: this.tasks };
     } catch (error) {
@@ -28,11 +28,11 @@ export class TodoService {
       const response = await fetch(
         `${this.API_CONFIG.baseUrl}/todos/user/${this.API_CONFIG.userId}`
       );
-      
+
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
-      
+
       const data = await response.json();
 
       if (!data || !Array.isArray(data.todos)) {
@@ -48,13 +48,14 @@ export class TodoService {
         updatedAt: new Date().toISOString(),
       }));
 
-      // Merge API tasks with local tasks
-      // Keep local tasks that have custom IDs (they start with 'task_')
-      const localTasks = this.tasks.filter(task => task.id.startsWith('task_'));
+      // Refactor this to now use a more robust method, unique flag perhaps to indify tasks
+      const localTasks = this.tasks.filter((task) =>
+        task.id.startsWith("task_")
+      );
       this.tasks = [...localTasks, ...apiTasks];
 
       // Save merged tasks to storage
-      await TaskStorage.saveTasks(this.tasks);
+      await TodoStorage.saveTasks(this.tasks);
       return { tasks: this.tasks };
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -77,7 +78,7 @@ export class TodoService {
 
       // Add to beginning of list
       this.tasks.unshift(newTask);
-      await TaskStorage.saveTasks(this.tasks);
+      await TodoStorage.saveTasks(this.tasks);
 
       return { tasks: this.tasks };
     } catch (error) {
@@ -104,7 +105,7 @@ export class TodoService {
       };
 
       this.tasks[taskIndex] = updatedTask;
-      await TaskStorage.saveTasks(this.tasks);
+      await TodoStorage.saveTasks(this.tasks);
 
       return { tasks: this.tasks };
     } catch (error) {
@@ -122,7 +123,7 @@ export class TodoService {
       }
 
       this.tasks.splice(taskIndex, 1);
-      await TaskStorage.saveTasks(this.tasks);
+      await TodoStorage.saveTasks(this.tasks);
 
       return { tasks: this.tasks };
     } catch (error) {
@@ -137,7 +138,7 @@ export class TodoService {
 
   public async clearStorage(): Promise<void> {
     try {
-      await TaskStorage.clearTasks();
+      await TodoStorage.clearTasks();
       this.tasks = [];
       this.hasLoadedFromStorage = false;
     } catch (error) {

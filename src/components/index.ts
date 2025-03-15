@@ -1,5 +1,4 @@
-export { TaskList } from "./TaskList";
-export { TaskListItem } from "./TaskListItem";
-
-export { AddTaskForm } from "./AddTaskForm";
+export { TodoList } from "./TodoList";
+export { TodoListItem } from "./TodoListItem";
+export { AddTodoForm } from "./AddTodoForm";
 export { NetworkStatusBar } from "./NetworkStatusBar";

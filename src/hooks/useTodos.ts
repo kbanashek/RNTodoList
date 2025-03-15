@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Task } from "../store/types";
 import { TodoService } from "../services/todoService";
 import { useNetworkStatus } from "./useNetworkStatus";
+import { API_BASE_URL, USER_ID } from "@env";
 
 interface State {
   todos: Task[];
@@ -17,9 +18,10 @@ const initialState: State = {
   error: null,
 };
 
+console.log(API_BASE_URL, USER_ID);
 const todoService = new TodoService({
-  baseUrl: "https://dummyjson.com",
-  userId: 10,
+  baseUrl: API_BASE_URL,
+  userId: parseInt(USER_ID, 0),
 });
 
 export function useTodos() {
