@@ -1,7 +1,7 @@
-// Task Types
+// Todo Types
 export type SyncStatus = "synced" | "pending" | "error";
 
-export interface Task {
+export interface Todo {
   id: string;
   title: string;
   completed: boolean;
@@ -28,12 +28,12 @@ export interface PendingChange {
 
 // Service Types
 export interface TodoServiceResult {
-  tasks: Task[];
+  todos: Todo[];
   pendingChanges: PendingChange[];
 }
 
-export interface UseTasksState {
-  tasks: Task[];
+export interface UseTodosState {
+  todos: Todo[];
   pendingChanges: PendingChange[];
   isLoading: boolean;
   error: Error | null;

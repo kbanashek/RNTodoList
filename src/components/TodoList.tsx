@@ -2,7 +2,7 @@ import React from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { ActivityIndicator, Text } from "react-native-paper";
 import { Task } from "../store/types";
-import { TaskListItem } from "./TaskListItem";
+import { TodoListItem } from "./TodoListItem";
 
 interface TaskListProps {
   tasks: Task[];
@@ -14,7 +14,7 @@ interface TaskListProps {
   onEditTask: (taskId: string, title: string) => void;
 }
 
-export function TaskList({
+export function TodoList({
   tasks,
   isLoading,
   loadingTaskIds,
@@ -55,7 +55,7 @@ export function TaskList({
       data={tasks}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
-        <TaskListItem
+        <TodoListItem
           task={item}
           isLoading={loadingTaskIds.has(item.id)}
           onToggleComplete={onToggleComplete}
@@ -89,10 +89,10 @@ const styles = StyleSheet.create({
   messageText: {
     marginTop: 8,
     fontSize: 16,
-    color: '#ffffff',
-    textAlign: 'center',
+    color: "#ffffff",
+    textAlign: "center",
   },
   errorText: {
-    color: '#cf6679',
+    color: "#cf6679",
   },
 });

@@ -71,6 +71,4 @@ dist/
 # TypeScript
 *.tsbuildinfo
 
-# Legacy files
-src/hooks/useTodos.ts
-src/store/taskSlice.ts
+

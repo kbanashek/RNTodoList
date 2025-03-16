@@ -22,10 +22,11 @@ const todoService = new TodoService({
   userId: 1,
 });
 
-export function useTasks() {
+export function useTodos() {
   const [state, setState] = useState<State>(initialState);
   const networkStatus = useNetworkStatus();
-  const isOnline = !networkStatus.isOffline && networkStatus.isInternetReachable;
+  const isOnline =
+    !networkStatus.isOffline && networkStatus.isInternetReachable;
 
   const loadTasks = useCallback(async () => {
     try {
@@ -77,36 +78,39 @@ export function useTasks() {
     }
   }, []);
 
-  const editTask = useCallback(async (taskId: string, updates: Partial<Task>) => {
-    try {
-      setState((prev) => ({
-        ...prev,
-        loadingTaskIds: new Set(prev.loadingTaskIds).add(taskId),
-      }));
+  const editTask = useCallback(
+    async (taskId: string, updates: Partial<Task>) => {
+      try {
+        setState((prev) => ({
+          ...prev,
+          loadingTaskIds: new Set(prev.loadingTaskIds).add(taskId),
+        }));
 
-      const result = await todoService.editTask(taskId, updates);
-      
-      setState((prev) => {
-        const loadingTaskIds = new Set(prev.loadingTaskIds);
-        loadingTaskIds.delete(taskId);
-        return {
-          ...prev,
-          tasks: result.tasks,
-          loadingTaskIds,
-        };
-      });
-    } catch (error) {
-      setState((prev) => {
-        const loadingTaskIds = new Set(prev.loadingTaskIds);
-        loadingTaskIds.delete(taskId);
-        return {
-          ...prev,
-          loadingTaskIds,
-          error: error as Error,
-        };
-      });
-    }
-  }, []);
+        const result = await todoService.editTask(taskId, updates);
+
+        setState((prev) => {
+          const loadingTaskIds = new Set(prev.loadingTaskIds);
+          loadingTaskIds.delete(taskId);
+          return {
+            ...prev,
+            tasks: result.tasks,
+            loadingTaskIds,
+          };
+        });
+      } catch (error) {
+        setState((prev) => {
+          const loadingTaskIds = new Set(prev.loadingTaskIds);
+          loadingTaskIds.delete(taskId);
+          return {
+            ...prev,
+            loadingTaskIds,
+            error: error as Error,
+          };
+        });
+      }
+    },
+    []
+  );
 
   const deleteTask = useCallback(async (taskId: string) => {
     try {
@@ -116,7 +120,7 @@ export function useTasks() {
       }));
 
       const result = await todoService.deleteTask(taskId);
-      
+
       setState((prev) => {
         const loadingTaskIds = new Set(prev.loadingTaskIds);
         loadingTaskIds.delete(taskId);

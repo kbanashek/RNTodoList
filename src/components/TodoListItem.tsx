@@ -18,7 +18,7 @@ interface TaskListItemProps {
   onEditTask: (taskId: string, title: string) => void;
 }
 
-export function TaskListItem({
+export function TodoListItem({
   task,
   isLoading = false,
   onToggleComplete,

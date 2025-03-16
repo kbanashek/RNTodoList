@@ -6,7 +6,7 @@ interface AddTaskFormProps {
   onSubmit: (title: string) => void;
 }
 
-export function AddTaskForm({ onSubmit }: AddTaskFormProps) {
+export function AddTodoForm({ onSubmit }: AddTaskFormProps) {
   const [title, setTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,7 +43,11 @@ export function AddTaskForm({ onSubmit }: AddTaskFormProps) {
             icon="plus"
             onPress={handleSubmit}
             disabled={!title.trim() || isSubmitting}
-            color={!title.trim() || isSubmitting ? "rgba(255, 255, 255, 0.3)" : "#bb86fc"}
+            color={
+              !title.trim() || isSubmitting
+                ? "rgba(255, 255, 255, 0.3)"
+                : "#bb86fc"
+            }
           />
         }
         disabled={isSubmitting}
