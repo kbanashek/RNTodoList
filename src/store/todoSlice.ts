@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Task } from './types';
 
-interface TodoState {
+export interface TodoState {
   tasks: Task[];
   isLoading: boolean;
   error: string | null;
