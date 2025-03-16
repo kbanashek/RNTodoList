@@ -6,7 +6,7 @@ import { useNetworkStatus } from "../hooks/useNetworkStatus";
 export const NetworkStatusBar: React.FC = () => {
   const { isOffline } = useNetworkStatus();
 
-  if (isOffline) {
+  if (!isOffline) {
     return null;
   }
 
