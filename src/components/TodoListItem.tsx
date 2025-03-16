@@ -1,12 +1,11 @@
 import React, { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, Pressable } from "react-native";
 import {
   Card,
-  Checkbox,
-  IconButton,
   TextInput,
   Text,
   ActivityIndicator,
+  IconButton,
 } from "react-native-paper";
 import { Task } from "../store/types";
 
@@ -53,10 +52,15 @@ export function TodoListItem({
           {isLoading ? (
             <ActivityIndicator size={20} color="#bb86fc" />
           ) : (
-            <Checkbox
-              status={task.completed ? "checked" : "unchecked"}
-              onPress={() => onToggleComplete(task.id, !task.completed)}
-              color="#bb86fc"
+            <IconButton
+              icon={task.completed ? "check-circle-outline" : "circle-outline"}
+              onPress={() =>
+                !isLoading && onToggleComplete(task.id, !task.completed)
+              }
+              iconColor={
+                task.completed ? "#bb86fc" : "rgba(255, 255, 255, 0.7)"
+              }
+              size={36}
               disabled={isLoading}
             />
           )}
@@ -108,13 +112,20 @@ export function TodoListItem({
         </View>
         <View style={styles.actions}>
           {isEditing ? (
-            <IconButton
-              icon="close"
-              onPress={handleCancel}
-              iconColor="#cf6679"
-              size={20}
-              disabled={isLoading}
-            />
+            <Pressable onPress={handleCancel} style={{ width: 20, height: 20 }}>
+              <Text
+                style={{
+                  position: "absolute",
+                  color: "#cf6679",
+                  fontSize: 16,
+                  top: 0,
+                  left: 0,
+                  fontWeight: "600",
+                }}
+              >
+                ×
+              </Text>
+            </Pressable>
           ) : (
             <>
               <IconButton
@@ -157,14 +168,11 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 20,
     marginRight: 4,
   },
   checkboxContainerCompleted: {
-    borderColor: "#bb86fc",
-    backgroundColor: "rgba(187, 134, 252, 0.15)",
+    // borderColor: "#bb86fc",
+    // backgroundColor: "rgba(187, 134, 252, 0.15)",
   },
   middleContent: {
     flex: 1,
