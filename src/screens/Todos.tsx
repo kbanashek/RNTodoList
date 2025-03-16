@@ -5,7 +5,7 @@ import { AddTodoForm } from "../components/AddTodoForm";
 import { TodoList } from "../components/TodoList";
 import { useTodos } from "../hooks/useTodos";
 
-export function Todos() {
+export const Todos: React.FC = () => {
   const { tasks, isLoading, error, addTask, editTask, deleteTask } = useTodos();
 
   return (
@@ -29,7 +29,7 @@ export function Todos() {
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {

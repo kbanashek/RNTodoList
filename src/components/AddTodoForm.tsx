@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { TextInput, IconButton } from "react-native-paper";
 
-interface AddTaskFormProps {
+interface AddTodoFormProps {
   onSubmit: (title: string) => void;
 }
 
-export function AddTodoForm({ onSubmit }: AddTaskFormProps) {
+export const AddTodoForm: React.FC<AddTodoFormProps> = ({ onSubmit }) => {
   const [title, setTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -54,7 +54,7 @@ export function AddTodoForm({ onSubmit }: AddTaskFormProps) {
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {

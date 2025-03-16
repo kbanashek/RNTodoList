@@ -4,7 +4,7 @@ import { ActivityIndicator, Text } from "react-native-paper";
 import { Task } from "../store/types";
 import { TodoListItem } from "./TodoListItem";
 
-interface TaskListProps {
+interface TodoListProps {
   tasks: Task[];
   isLoading: boolean;
   loadingTaskIds: Set<string>;
@@ -14,7 +14,7 @@ interface TaskListProps {
   onEditTask: (taskId: string, title: string) => void;
 }
 
-export function TodoList({
+export const TodoList: React.FC<TodoListProps> = ({
   tasks,
   isLoading,
   loadingTaskIds,
@@ -22,7 +22,7 @@ export function TodoList({
   onToggleComplete,
   onDeleteTask,
   onEditTask,
-}: TaskListProps) {
+}) => {
   if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.centerContainer}>

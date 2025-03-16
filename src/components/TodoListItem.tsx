@@ -9,7 +9,7 @@ import {
 } from "react-native-paper";
 import { Task } from "../store/types";
 
-interface TaskListItemProps {
+interface TodoListItemProps {
   task: Task;
   isLoading?: boolean;
   onToggleComplete: (taskId: string, completed: boolean) => void;
@@ -17,13 +17,13 @@ interface TaskListItemProps {
   onEditTask: (taskId: string, title: string) => void;
 }
 
-export function TodoListItem({
+export const TodoListItem = ({
   task,
-  isLoading = false,
+  isLoading,
   onToggleComplete,
   onDeleteTask,
   onEditTask,
-}: TaskListItemProps) {
+}: TodoListItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
 
