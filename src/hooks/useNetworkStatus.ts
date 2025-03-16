@@ -10,7 +10,7 @@ const initialState: NetworkState = {
   lastChecked: new Date().toISOString(),
 };
 
-export function useNetworkStatus() {
+export const useNetworkStatus = () => {
   const [state, setState] = useState<NetworkState>(initialState);
 
   const mapNetworkType = (type: Network.NetworkStateType): NetworkType => {

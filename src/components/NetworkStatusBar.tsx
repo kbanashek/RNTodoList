@@ -1,12 +1,12 @@
-import React from 'react';
-import { StyleSheet } from 'react-native';
-import { Surface, Text } from 'react-native-paper';
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import React from "react";
+import { StyleSheet } from "react-native";
+import { Surface, Text } from "react-native-paper";
+import { useNetworkStatus } from "../hooks/useNetworkStatus";
 
-export function NetworkStatusBar() {
+export const NetworkStatusBar: React.FC = () => {
   const { isOffline } = useNetworkStatus();
 
-  if (!isOffline) {
+  if (isOffline) {
     return null;
   }
 
@@ -17,23 +17,20 @@ export function NetworkStatusBar() {
       </Text>
     </Surface>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: "#ccc",
     padding: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1e1e1e',
-    marginHorizontal: 16,
-    marginBottom: 8,
+    margin: 8,
     borderRadius: 4,
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#cf6679',
+    borderColor: "#cf6679",
   },
   text: {
-    color: '#cf6679',
-    fontWeight: '500',
-    fontSize: 14,
+    color: "#cf6679",
+    fontWeight: "500",
   },
 });

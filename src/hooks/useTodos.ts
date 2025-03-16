@@ -3,32 +3,34 @@ import { Task } from "../store/types";
 import { TodoService } from "../services/todoService";
 import { useNetworkStatus } from "./useNetworkStatus";
 
-interface State {
-  tasks: Task[];
-  isLoading: boolean;
-  loadingTaskIds: Set<string>;
-  error: Error | null;
-}
-
-const initialState: State = {
-  tasks: [],
-  isLoading: true,
-  loadingTaskIds: new Set(),
-  error: null,
-};
-
+//TODO: move into .env
 const todoService = new TodoService({
   baseUrl: "https://dummyjson.com",
   userId: 1,
 });
 
-export function useTodos() {
+interface State {
+  tasks: Task[];
+  isLoading: boolean;
+  error: Error | null;
+  loadingTaskIds: Set<string>;
+}
+
+const initialState: State = {
+  tasks: [],
+  isLoading: false,
+  error: null,
+  loadingTaskIds: new Set(),
+};
+
+export const useTodos = () => {
   const [state, setState] = useState<State>(initialState);
   const networkStatus = useNetworkStatus();
   const isOnline =
     !networkStatus.isOffline && networkStatus.isInternetReachable;
 
   const loadTasks = useCallback(async () => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
       // First load from local storage
       const localResult = await todoService.init();
@@ -81,29 +83,33 @@ export function useTodos() {
   const editTask = useCallback(
     async (taskId: string, updates: Partial<Task>) => {
       try {
-        setState((prev) => ({
-          ...prev,
-          loadingTaskIds: new Set(prev.loadingTaskIds).add(taskId),
-        }));
+        setState((prev) => {
+          const newLoadingTaskIds = new Set(prev.loadingTaskIds);
+          newLoadingTaskIds.add(taskId);
+          return {
+            ...prev,
+            loadingTaskIds: newLoadingTaskIds,
+          };
+        });
 
         const result = await todoService.editTask(taskId, updates);
 
         setState((prev) => {
-          const loadingTaskIds = new Set(prev.loadingTaskIds);
-          loadingTaskIds.delete(taskId);
+          const newLoadingTaskIds = new Set(prev.loadingTaskIds);
+          newLoadingTaskIds.delete(taskId);
           return {
             ...prev,
             tasks: result.tasks,
-            loadingTaskIds,
+            loadingTaskIds: newLoadingTaskIds,
           };
         });
       } catch (error) {
         setState((prev) => {
-          const loadingTaskIds = new Set(prev.loadingTaskIds);
-          loadingTaskIds.delete(taskId);
+          const newLoadingTaskIds = new Set(prev.loadingTaskIds);
+          newLoadingTaskIds.delete(taskId);
           return {
             ...prev,
-            loadingTaskIds,
+            loadingTaskIds: newLoadingTaskIds,
             error: error as Error,
           };
         });
@@ -114,32 +120,51 @@ export function useTodos() {
 
   const deleteTask = useCallback(async (taskId: string) => {
     try {
-      setState((prev) => ({
-        ...prev,
-        loadingTaskIds: new Set(prev.loadingTaskIds).add(taskId),
-      }));
+      setState((prev) => {
+        const newLoadingTaskIds = new Set(prev.loadingTaskIds);
+        newLoadingTaskIds.add(taskId);
+        return {
+          ...prev,
+          loadingTaskIds: newLoadingTaskIds,
+        };
+      });
 
       const result = await todoService.deleteTask(taskId);
 
       setState((prev) => {
-        const loadingTaskIds = new Set(prev.loadingTaskIds);
-        loadingTaskIds.delete(taskId);
+        const newLoadingTaskIds = new Set(prev.loadingTaskIds);
+        newLoadingTaskIds.delete(taskId);
         return {
           ...prev,
           tasks: result.tasks,
-          loadingTaskIds,
+          loadingTaskIds: newLoadingTaskIds,
         };
       });
     } catch (error) {
       setState((prev) => {
-        const loadingTaskIds = new Set(prev.loadingTaskIds);
-        loadingTaskIds.delete(taskId);
+        const newLoadingTaskIds = new Set(prev.loadingTaskIds);
+        newLoadingTaskIds.delete(taskId);
         return {
           ...prev,
-          loadingTaskIds,
+          loadingTaskIds: newLoadingTaskIds,
           error: error as Error,
         };
       });
+    }
+  }, []);
+
+  const fetchTasks = useCallback(async () => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    try {
+      const { tasks: fetchedTasks } = await todoService.fetchTasks();
+      setState((prev) => ({ ...prev, tasks: fetchedTasks }));
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        error: err instanceof Error ? err : new Error("Failed to fetch tasks"),
+      }));
+    } finally {
+      setState((prev) => ({ ...prev, isLoading: false }));
     }
   }, []);
 
@@ -156,5 +181,6 @@ export function useTodos() {
     editTask,
     deleteTask,
     loadTasks,
+    fetchTasks,
   };
-}
+};

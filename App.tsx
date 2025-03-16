@@ -4,6 +4,7 @@ import { Provider as PaperProvider, MD3DarkTheme } from "react-native-paper";
 import { Provider as ReduxProvider } from "react-redux";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Todos } from "./src/screens/Todos";
+import { NetworkStatusBar } from "./src/components/NetworkStatusBar";
 import { store } from "./src/store";
 
 const theme = {
@@ -15,17 +16,20 @@ const theme = {
   },
 };
 
-export default function App() {
+export const App: React.FC = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: "#121212" }}>
         <StatusBar barStyle="light-content" backgroundColor="#121212" />
         <ReduxProvider store={store}>
           <PaperProvider theme={theme}>
+            <NetworkStatusBar />
             <Todos />
           </PaperProvider>
         </ReduxProvider>
       </SafeAreaView>
     </SafeAreaProvider>
   );
-}
+};
+
+export default App;
