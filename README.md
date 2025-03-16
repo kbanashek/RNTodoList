@@ -1,174 +1,172 @@
-# RNTodoList - Offline-First Todo App
+# RNTodoList
 
-A React Native todo list application built with offline-first architecture, providing seamless task management regardless of network connectivity.
+A React Native todo app with robust offline support and sync capabilities. Built with Expo, TypeScript, and Redux Toolkit.
 
-![alt text](image-1.png)
+![
+  App Screenshot
+](image-2.png)
 
-## Features
+## Core Features
 
-### Offline-First Architecture
+- **State Management**
 
-- **Local Storage**: Tasks are saved locally using AsyncStorage
-- **Initial Data**: Tasks initially fetched from DummyJSON API
-- **Local Operations**: All add/edit/delete operations handled locally
-- **Network Status**: Real-time connection monitoring
-- **Data Flow**:
-  1. Save changes to local storage
-  2. Update UI immediately
-  3. Maintain offline functionality
-  4. Show network status clearly
+  - Redux Toolkit for state updates
+  - Optimistic UI updates
+  - Memoized selectors
 
-### Task Management
+- **Offline-First Architecture**
 
-- **Create Tasks**: Add new tasks that appear at the top of the list
-- **Edit Tasks**: Modify task titles with save/cancel options
-- **Delete Tasks**: Remove tasks immediately
-- **Complete Tasks**: Toggle task completion with visual feedback
-- **Task Ordering**: Latest tasks appear first
+  - Local storage with AsyncStorage
+  - Initial data from DummyJSON API
+  - Local-first operations
+  - Background sync on reconnect
+  - Optimistic UI updates
 
-### Network Status Detection
+- **Task Management**
 
-- **Connection Types**: Detects online/offline state
-- **Status Updates**: Adaptive polling (30s online, 5s offline)
-- **Visual Indicators**:
-  - Clear offline status message
-  - Consistent dark theme styling
-  - Border indicators for status
+  - Create, edit, and delete tasks
+  - Local operations with sync
+  - Loading states per task ID
+  - Newest tasks first
+  - Offline data persistence
 
-### UI/UX Features
+- **Network Handling**
+  - Real-time connection monitoring
+  - Internet reachability checks
+  - Clear offline indicators
+  - Automatic data sync
+  - Error recovery
 
-- **Dark Theme**: Modern dark color scheme
-- **Responsive Design**: Proper safe area handling
-- **Visual Feedback**:
-  - Task completion indicators
-  - Edit mode with save/cancel
-  - Network status updates
-- **Smooth Interactions**:
-  - Immediate local updates
-  - Clean checkbox animations
-  - Proper touch targets
+## Tech Stack
 
-## Technical Implementation
+- React Native + Expo
+- TypeScript for type safety
+- Redux Toolkit with Immer
+- AsyncStorage for offline data
+- React Native Paper UI
+- Jest + React Testing Library
+- Husky for Git hooks
 
-### Core Libraries
-
-- [React Native](https://reactnative.dev/): Cross-platform mobile framework
-- [React Native Paper](https://callstack.github.io/react-native-paper/): Material Design components
-- [AsyncStorage](https://react-native-async-storage.github.io/async-storage/): Local data persistence
-- [Redux](https://redux.js.org/): State management
-- [TypeScript](https://www.typescriptlang.org/): Type safety and developer experience
-- [Expo](https://expo.dev/): Development and build tools
-
-### Components
-
-- **Tasks**: Main screen with task management
-- **TaskList**: Renders tasks with loading states
-- **TaskListItem**: Individual task with edit/delete
-- **AddTaskForm**: New task creation
-- **NetworkStatusBar**: Connection status display
-
-## Future Improvements
-
-### Testing & Code Quality
-- Add [Jest](https://jestjs.io/) unit tests for hooks and services
-- Implement [React Native Testing Library](https://callstack.github.io/react-native-testing-library/) for component tests
-- Add [Detox](https://wix.github.io/Detox/) E2E tests
-- Set up [Expo EAS](https://docs.expo.dev/eas/) workflow for CI/CD
-- Add test coverage reporting with [Jest Coverage](https://jestjs.io/docs/configuration#collectcoverage-boolean)
-- Configure [Husky](https://typicode.github.io/husky/) pre-commit hooks:
-  - Run unit tests
-  - [ESLint](https://eslint.org/) checks
-  - [Prettier](https://prettier.io/) formatting
-  - TypeScript type checking
-
-### Features
-- Task categories/tags
-- Due dates and reminders
-- Task priority levels
-- Sorting and filtering options
-- Task search functionality
-- Batch task operations
-
-### UI/UX
-- Task animations (swipe, completion)
-- Drag and drop reordering
-- Pull to refresh
-- Custom themes support
-- Accessibility improvements
-- Haptic feedback
-
-### Performance
-- Task list virtualization
-- Network request caching
-- Bundle size optimization
-
-### Architecture
-- Enhanced error handling and monitoring:
-  - [Sentry](https://docs.sentry.io/platforms/react-native/): Real-time error tracking with offline support
-  - Custom error boundaries with offline fallbacks
-  - Structured error logging with AsyncStorage queue
-  - Network error recovery with retry logic
-  - Offline-first error tracking strategy
-- Performance monitoring:
-  - [DataDog RUM](https://docs.datadoghq.com/real_user_monitoring/reactnative/): User experience analytics
-  - Offline-capable network request tracking
-  - Performance metrics with local buffering
-  - Crash reporting with offline storage
-  - Custom event tracking for task operations
-- Better TypeScript types
-- Code splitting and lazy loading
-- Bundle size optimization
-- Over-the-Air Updates:
-  - [Expo Updates](https://docs.expo.dev/versions/latest/sdk/updates/): Automatic app updates
-  - Phased rollout strategy
-  - Offline fallback for failed updates
-  - Update download on WiFi only
-  - Background update checks
-  - Update notifications
-
-### Documentation
-- API documentation
-- Component storybook
-- Contributing guidelines
-- Code style guide
-- Architecture diagrams
-
-## Running the App
+## Quick Start
 
 1. Install dependencies:
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
-2. Start the development server:
+2. Start the Expo server:
 
-   ```bash
-   npx expo start
-   ```
+```bash
+npm start
+```
 
-3. Run on iOS/Android:
-   - Use Expo Go app
-   - Or run in simulator/emulator
+3. Run on device:
 
-## Development Notes
+- Install Expo Go on your iOS/Android device
+- Scan the QR code from terminal
+- Or press 'i' for iOS simulator / 'a' for Android
 
-1. **Testing Offline Mode**:
+## Development
 
-   - Enable Airplane Mode
-   - Add/edit/delete tasks
-   - Verify local persistence
-   - Check network status updates
+### Test Suite
 
-2. **UI Testing**:
+```bash
+npm test           # Run Jest tests
+npm run lint       # Run ESLint
+npm run format     # Run Prettier
+```
 
-   - Verify safe areas on iOS/Android
-   - Check dark theme consistency
-   - Test task interactions
-   - Monitor network status changes
+### Git Hooks
 
-3. **Data Management**:
-   - Changes persist in AsyncStorage
-   - Initial data from DummyJSON
-   - Local operations only
-   - Clear network status indication
+```bash
+pre-commit:        # Run before each commit
+  - TypeScript check
+  - ESLint
+  - Prettier
+  - Jest tests
+
+pre-push:          # Run before each push
+  - Full test suite
+  - Build check
+```
+
+### Project Structure
+
+```
+src/
+├── components/    # UI components
+├── hooks/        # Redux-integrated hooks for todos and network
+├── services/     # TodoService with offline-first operations
+├── storage/      # Task storage and offline persistence
+├── store/        # Redux store and slices
+└── types/        # TypeScript definitions
+```
+
+### Key Implementation Details
+
+- **Redux Integration**
+
+  - Migrated from React state
+  - Immer for immutability
+  - Set middleware for loading
+  - Memoized selectors
+  - Optimistic updates
+  - Efficient state updates
+
+- **Task Interface**
+
+  - Unique task ID
+  - Title and completion status
+  - Creation timestamp
+  - Update timestamp
+  - Sync status tracking
+
+- **Offline Support**
+
+  - AsyncStorage persistence
+  - Immediate UI updates
+  - Background sync queue
+  - Network error recovery
+  - Local state priority
+  - Sync status tracking
+
+- **Storage Architecture**
+
+  - AsyncStorage for persistence
+  - JSON serialization
+  - Optimized batch operations
+  - Error handling with fallbacks
+
+- **Network State**
+
+  - Connection type detection
+  - Internet reachability
+  - Last check timestamp
+  - Status monitoring
+  - Auto-reconnect handling
+
+- **Type Safety**
+  - Full TypeScript coverage
+  - Redux state typing
+  - Network state interface
+  - Task type definitions
+  - Strict null checks
+
+## Planned Features
+
+- [ ] Enhanced conflict resolution
+- [ ] E2E tests with Detox
+- [ ] Support for expo updates (OTA)
+
+## Contributing
+
+1. Fork the repo
+2. Create a feature branch
+3. Make your changes
+4. Run tests and lint checks
+5. Submit a PR
+
+## License
+
+MIT
