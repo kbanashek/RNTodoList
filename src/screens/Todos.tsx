@@ -6,7 +6,7 @@ import { TodoList } from '../components/TodoList';
 import { useTodos } from '../hooks/useTodos';
 
 export const Todos: React.FC = () => {
-  const { tasks, isLoading, error, addTodo, editTodo, deleteTodo } = useTodos();
+  const { tasks, isLoading, loadingTaskIds, error, addTodo, editTodo, deleteTodo } = useTodos();
 
   return (
     <View style={styles.container}>
@@ -17,7 +17,7 @@ export const Todos: React.FC = () => {
       <TodoList
         tasks={tasks}
         isLoading={isLoading}
-        loadingTaskIds={new Set()}
+        loadingTaskIds={loadingTaskIds}
         error={error}
         onToggleComplete={(taskId: string, completed: boolean) => editTodo(taskId, { completed })}
         onDeleteTask={(taskId: string) => deleteTodo(taskId)}

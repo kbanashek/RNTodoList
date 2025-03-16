@@ -7,8 +7,8 @@ import { TodoListItem } from "./TodoListItem";
 interface TodoListProps {
   tasks: Task[];
   isLoading: boolean;
-  loadingTaskIds: Set<string>;
-  error: Error | null;
+  loadingTaskIds: string[];
+  error: string | null;
   onToggleComplete: (taskId: string, completed: boolean) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask: (taskId: string, title: string) => void;
@@ -36,7 +36,7 @@ export const TodoList: React.FC<TodoListProps> = ({
     return (
       <View style={styles.centerContainer}>
         <Text style={[styles.messageText, styles.errorText]}>
-          Error: {error.message}
+          Error: {error}
         </Text>
       </View>
     );
@@ -57,7 +57,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       renderItem={({ item }) => (
         <TodoListItem
           task={item}
-          isLoading={loadingTaskIds.has(item.id)}
+          isLoading={loadingTaskIds.includes(item.id)}
           onToggleComplete={onToggleComplete}
           onDeleteTask={onDeleteTask}
           onEditTask={onEditTask}
@@ -67,7 +67,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       contentContainerStyle={styles.listContent}
     />
   );
-}
+};
 
 const styles = StyleSheet.create({
   list: {

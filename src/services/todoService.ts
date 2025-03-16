@@ -11,7 +11,7 @@ export class TodoService {
     try {
       this.tasks = await TaskStorage.getTasks();
       this.hasLoadedFromStorage = true;
-      return { tasks: this.tasks };
+      return { tasks: [...this.tasks] };
     } catch (error) {
       console.error("Error initializing tasks:", error);
       return { tasks: [] };
@@ -55,7 +55,7 @@ export class TodoService {
 
       // Save merged tasks to storage
       await TaskStorage.saveTasks(this.tasks);
-      return { tasks: this.tasks };
+      return { tasks: [...this.tasks] };
     } catch (error) {
       console.error("Error fetching tasks:", error);
       throw error;
@@ -75,11 +75,11 @@ export class TodoService {
         updatedAt: now,
       };
 
-      // Add to beginning of list
-      this.tasks.unshift(newTask);
+      // Create new array with the new task at the beginning
+      this.tasks = [newTask, ...this.tasks];
       await TaskStorage.saveTasks(this.tasks);
 
-      return { tasks: this.tasks };
+      return { tasks: [...this.tasks] };
     } catch (error) {
       console.error("Error adding task:", error);
       throw error;
@@ -97,16 +97,19 @@ export class TodoService {
         throw new Error(`Task not found: ${taskId}`);
       }
 
-      const updatedTask = {
-        ...this.tasks[taskIndex],
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      };
+      // Create new array with updated task
+      this.tasks = [
+        ...this.tasks.slice(0, taskIndex),
+        {
+          ...this.tasks[taskIndex],
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        },
+        ...this.tasks.slice(taskIndex + 1)
+      ];
 
-      this.tasks[taskIndex] = updatedTask;
       await TaskStorage.saveTasks(this.tasks);
-
-      return { tasks: this.tasks };
+      return { tasks: [...this.tasks] };
     } catch (error) {
       console.error("Error editing task:", error);
       throw error;
@@ -121,10 +124,14 @@ export class TodoService {
         throw new Error(`Task not found: ${taskId}`);
       }
 
-      this.tasks.splice(taskIndex, 1);
-      await TaskStorage.saveTasks(this.tasks);
+      // Create new array without the deleted task
+      this.tasks = [
+        ...this.tasks.slice(0, taskIndex),
+        ...this.tasks.slice(taskIndex + 1)
+      ];
 
-      return { tasks: this.tasks };
+      await TaskStorage.saveTasks(this.tasks);
+      return { tasks: [...this.tasks] };
     } catch (error) {
       console.error("Error deleting task:", error);
       throw error;
