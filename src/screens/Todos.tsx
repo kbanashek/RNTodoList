@@ -22,18 +22,18 @@ export function Todos() {
       <NetworkStatusBar />
       <View style={styles.header}>
         <Text style={styles.title}>Todo List</Text>
-        <AddTodoForm onSubmit={addTodo} />
+        <AddTodoForm onSubmit={addTodo} isLoading={isLoading} />
       </View>
       <TodoList
-        tasks={todos}
+        todos={todos}
         isLoading={isLoading}
-        loadingTaskIds={loadingTodoIds}
+        loadingTodoIds={loadingTodoIds}
         error={error}
         onToggleComplete={(todoId, completed) =>
           editTodo(todoId, { completed })
         }
-        onDeleteTask={deleteTodo}
-        onEditTask={(todoId, title) => editTodo(todoId, { title })}
+        onDeleteTodo={deleteTodo}
+        onEditTodo={(todoId, title) => editTodo(todoId, { title })}
       />
     </View>
   );

@@ -1,13 +1,14 @@
-import { Task, TodoServiceConfig } from "../store/types";
+import { Todo, TodoServiceConfig } from "../store/types";
 import { TodoStorage } from "../storage";
+import { ApiTodo, TodosResponse } from "../types/api/responses";
 
 export class TodoService {
-  private tasks: Task[] = [];
+  private tasks: Todo[] = [];
   private hasLoadedFromStorage = false;
 
   constructor(private readonly API_CONFIG: TodoServiceConfig) {}
 
-  public async init(): Promise<{ tasks: Task[] }> {
+  public async init(): Promise<{ tasks: Todo[] }> {
     try {
       this.tasks = await TodoStorage.getTasks();
       this.hasLoadedFromStorage = true;
@@ -18,9 +19,8 @@ export class TodoService {
     }
   }
 
-  public async fetchTasks(): Promise<{ tasks: Task[] }> {
+  public async fetchTodos(): Promise<{ tasks: Todo[] }> {
     try {
-      // First load local tasks if we haven't already
       if (!this.hasLoadedFromStorage) {
         await this.init();
       }
@@ -33,28 +33,26 @@ export class TodoService {
         throw new Error(`API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as TodosResponse;
 
       if (!data || !Array.isArray(data.todos)) {
         throw new Error("Invalid API response format");
       }
 
-      // Map API response to our Task format
-      const apiTasks = data.todos.map((task: any) => ({
+      const now = new Date().toISOString();
+      const apiTasks = data.todos.map((task: ApiTodo) => ({
         id: String(task.id),
         title: task.todo,
         completed: task.completed,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
       }));
 
-      // Refactor this to now use a more robust method, unique flag perhaps to indify tasks
       const localTasks = this.tasks.filter((task) =>
         task.id.startsWith("task_")
       );
       this.tasks = [...localTasks, ...apiTasks];
 
-      // Save merged tasks to storage
       await TodoStorage.saveTasks(this.tasks);
       return { tasks: this.tasks };
     } catch (error) {
@@ -63,12 +61,12 @@ export class TodoService {
     }
   }
 
-  public async addTask(title: string): Promise<{ tasks: Task[] }> {
+  public async addTodo(title: string): Promise<{ tasks: Todo[] }> {
     try {
       const now = new Date().toISOString();
       const taskId = this.generateId("task");
 
-      const newTask: Task = {
+      const newTask: Todo = {
         id: taskId,
         title,
         completed: false,
@@ -76,7 +74,6 @@ export class TodoService {
         updatedAt: now,
       };
 
-      // Add to beginning of list
       this.tasks.unshift(newTask);
       await TodoStorage.saveTasks(this.tasks);
 
@@ -87,10 +84,10 @@ export class TodoService {
     }
   }
 
-  public async editTask(
+  public async editTodo(
     taskId: string,
-    updates: Partial<Task>
-  ): Promise<{ tasks: Task[] }> {
+    updates: Partial<Todo>
+  ): Promise<{ tasks: Todo[] }> {
     try {
       const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
 
@@ -98,10 +95,11 @@ export class TodoService {
         throw new Error(`Task not found: ${taskId}`);
       }
 
+      const now = new Date().toISOString();
       const updatedTask = {
         ...this.tasks[taskIndex],
         ...updates,
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
       };
 
       this.tasks[taskIndex] = updatedTask;
@@ -114,7 +112,7 @@ export class TodoService {
     }
   }
 
-  public async deleteTask(taskId: string): Promise<{ tasks: Task[] }> {
+  public async deleteTodo(taskId: string): Promise<{ tasks: Todo[] }> {
     try {
       const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
 

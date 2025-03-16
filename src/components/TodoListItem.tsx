@@ -7,37 +7,37 @@ import {
   Text,
   ActivityIndicator,
 } from "react-native-paper";
-import { Task } from "../store/types";
+import { Todo } from "../store/types";
 import { CustomCheckbox } from "./CustomCheckbox";
 
-interface TaskListItemProps {
-  task: Task;
+interface TodoListItemProps {
+  todo: Todo;
   isLoading?: boolean;
-  onToggleComplete: (taskId: string, completed: boolean) => void;
-  onDeleteTask: (taskId: string) => void;
-  onEditTask: (taskId: string, title: string) => void;
+  onToggleComplete: (todoId: string, completed: boolean) => void;
+  onDeleteTodo: (todoId: string) => void;
+  onEditTodo: (todoId: string, title: string) => void;
 }
 
 export function TodoListItem({
-  task,
+  todo,
   isLoading = false,
   onToggleComplete,
-  onDeleteTask,
-  onEditTask,
-}: TaskListItemProps) {
+  onDeleteTodo,
+  onEditTodo,
+}: TodoListItemProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(task.title);
+  const [editedTitle, setEditedTitle] = useState(todo.title);
 
   const handleSave = () => {
     const trimmedTitle = editedTitle.trim();
-    if (trimmedTitle && trimmedTitle !== task.title) {
-      onEditTask(task.id, trimmedTitle);
+    if (trimmedTitle && trimmedTitle !== todo.title) {
+      onEditTodo(todo.id, trimmedTitle);
     }
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditedTitle(task.title);
+    setEditedTitle(todo.title);
     setIsEditing(false);
   };
 
@@ -49,8 +49,8 @@ export function TodoListItem({
             <ActivityIndicator size={32} color="#bb86fc" />
           ) : (
             <CustomCheckbox
-              checked={task.completed}
-              onPress={() => onToggleComplete(task.id, !task.completed)}
+              checked={todo.completed}
+              onPress={() => onToggleComplete(todo.id, !todo.completed)}
               disabled={isLoading}
               color="#bb86fc"
             />
@@ -76,12 +76,12 @@ export function TodoListItem({
                   disabled={
                     isLoading ||
                     !editedTitle.trim() ||
-                    editedTitle.trim() === task.title
+                    editedTitle.trim() === todo.title
                   }
                   color={
                     isLoading ||
                     !editedTitle.trim() ||
-                    editedTitle.trim() === task.title
+                    editedTitle.trim() === todo.title
                       ? "rgba(255, 255, 255, 0.3)"
                       : "#bb86fc"
                   }
@@ -92,12 +92,12 @@ export function TodoListItem({
             <Text
               style={[
                 styles.title,
-                task.completed && styles.completedTitle,
+                todo.completed && styles.completedTitle,
                 isLoading && styles.loadingTitle,
               ]}
               numberOfLines={2}
             >
-              {task.title}
+              {todo.title}
             </Text>
           )}
         </View>
@@ -121,7 +121,7 @@ export function TodoListItem({
               />
               <IconButton
                 icon="delete"
-                onPress={() => onDeleteTask(task.id)}
+                onPress={() => onDeleteTodo(todo.id)}
                 iconColor="#cf6679"
                 size={20}
                 disabled={isLoading}

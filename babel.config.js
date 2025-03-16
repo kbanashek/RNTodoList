@@ -14,10 +14,17 @@ module.exports = function (api) {
             '@components': './src/components',
             '@screens': './src/screens',
             '@services': './src/services',
-            '@hooks': './src/hooks'
+            '@hooks': './src/hooks',
+            '@env': './src/env.d.ts'
           }
         }
-      ]
-    ]
+      ],
+      ['@babel/plugin-transform-private-methods', { loose: true }]
+    ],
+    env: {
+      test: {
+        plugins: ['@babel/plugin-transform-runtime']
+      }
+    }
   };
 };
