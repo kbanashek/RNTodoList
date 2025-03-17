@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import * as Network from "expo-network";
-import { NetworkState, NetworkType } from "../store/types";
+import { useCallback, useEffect, useState } from 'react';
+import * as Network from 'expo-network';
+import { NetworkState, NetworkType } from '../store/types';
 
 const initialState: NetworkState = {
   isOffline: true,
@@ -9,6 +9,9 @@ const initialState: NetworkState = {
   type: NetworkType.NONE,
   lastChecked: new Date().toISOString(),
 };
+
+const CHECK_INTERVAL_ONLINE = 5000; // 5 seconds when online
+const CHECK_INTERVAL_OFFLINE = 3000; // 3 seconds when offline
 
 export const useNetworkStatus = () => {
   const [state, setState] = useState<NetworkState>(initialState);
@@ -38,7 +41,7 @@ export const useNetworkStatus = () => {
   const checkNetworkStatus = useCallback(async () => {
     try {
       const networkState = await Network.getNetworkStateAsync();
-      
+
       setState({
         isOffline: !networkState.isConnected || !networkState.isInternetReachable,
         isConnected: networkState.isConnected,
@@ -47,7 +50,7 @@ export const useNetworkStatus = () => {
         lastChecked: new Date().toISOString(),
       });
     } catch (error) {
-      console.error("Error checking network status:", error);
+      console.error('Error checking network status:', error);
       setState(prev => ({
         ...prev,
         isOffline: true,
@@ -61,9 +64,13 @@ export const useNetworkStatus = () => {
 
   useEffect(() => {
     checkNetworkStatus();
-    const interval = setInterval(checkNetworkStatus, 30000); // Check every 30s
+    // Use different check intervals based on connection state
+    const interval = setInterval(
+      checkNetworkStatus,
+      state.isOffline ? CHECK_INTERVAL_OFFLINE : CHECK_INTERVAL_ONLINE
+    );
     return () => clearInterval(interval);
-  }, [checkNetworkStatus]);
+  }, [checkNetworkStatus, state.isOffline]);
 
   return state;
-}
+};
