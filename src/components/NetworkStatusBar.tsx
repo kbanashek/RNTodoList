@@ -1,7 +1,7 @@
-import React from "react";
-import { StyleSheet } from "react-native";
-import { Surface, Text } from "react-native-paper";
-import { useNetworkStatus } from "../hooks/useNetworkStatus";
+import React from 'react';
+import { StyleSheet } from 'react-native';
+import { Surface, Text } from 'react-native-paper';
+import { useNetworkStatus } from '../hooks/network/useNetworkStatus';
 
 export const NetworkStatusBar: React.FC = () => {
   const { isOffline } = useNetworkStatus();
@@ -12,25 +12,23 @@ export const NetworkStatusBar: React.FC = () => {
 
   return (
     <Surface style={styles.container}>
-      <Text style={styles.text}>
-        📱 You are offline. Changes will sync when back online.
-      </Text>
+      <Text style={styles.text}>📱 You are offline. Changes will sync when back online.</Text>
     </Surface>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#ccc",
+    backgroundColor: '#ccc',
     padding: 8,
     margin: 8,
     borderRadius: 4,
-    alignItems: "center",
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: "#cf6679",
+    borderColor: '#cf6679',
   },
   text: {
-    color: "#cf6679",
-    fontWeight: "500",
+    color: '#cf6679',
+    fontWeight: '500',
   },
 });

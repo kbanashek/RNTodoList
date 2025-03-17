@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import * as Network from 'expo-network';
-import { NetworkState, NetworkType } from '../store/types';
+import { NetworkState, NetworkType } from '../../store/types';
 
 const initialState: NetworkState = {
   isOffline: true,
@@ -10,6 +10,7 @@ const initialState: NetworkState = {
   lastChecked: new Date().toISOString(),
 };
 
+// TODO: move into .env
 const CHECK_INTERVAL_ONLINE = 5000; // 5 seconds when online
 const CHECK_INTERVAL_OFFLINE = 3000; // 3 seconds when offline
 

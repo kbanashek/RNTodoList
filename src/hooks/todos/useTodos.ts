@@ -1,9 +1,15 @@
 import { useCallback, useEffect } from 'react';
-import { Task } from '../store/types';
-import { TodoService } from '../services/todoService';
-import { useNetworkStatus } from './useNetworkStatus';
-import { useAppDispatch, useAppSelector } from '../store';
-import { setTasks, setLoading, setError, addLoadingTaskId, removeLoadingTaskId } from '../store/todoSlice';
+import { Task } from '../../store/types';
+import { TodoService } from '../../services/todoService';
+import { useNetworkStatus } from '../network/useNetworkStatus';
+import { useAppDispatch, useAppSelector } from '../../store';
+import {
+  setTasks,
+  setLoading,
+  setError,
+  addLoadingTaskId,
+  removeLoadingTaskId,
+} from '../../store/slices/todoSlice';
 
 //TODO: move into .env
 const todoService = new TodoService({
@@ -13,7 +19,7 @@ const todoService = new TodoService({
 
 export const useTodos = () => {
   const dispatch = useAppDispatch();
-  const { tasks, isLoading, error, loadingTaskIds } = useAppSelector((state) => state.todos);
+  const { tasks, isLoading, error, loadingTaskIds } = useAppSelector(state => state.todos);
   const networkStatus = useNetworkStatus();
   const isOnline = !networkStatus.isOffline && networkStatus.isInternetReachable;
 
@@ -42,38 +48,47 @@ export const useTodos = () => {
     }
   }, [dispatch, isOnline]);
 
-  const addTodo = useCallback(async (title: string) => {
-    try {
-      const result = await todoService.addTask(title);
-      dispatch(setTasks([...result.tasks]));
-    } catch (error) {
-      dispatch(setError(error instanceof Error ? error.message : 'Failed to add task'));
-    }
-  }, [dispatch]);
+  const addTodo = useCallback(
+    async (title: string) => {
+      try {
+        const result = await todoService.addTask(title);
+        dispatch(setTasks([...result.tasks]));
+      } catch (error) {
+        dispatch(setError(error instanceof Error ? error.message : 'Failed to add task'));
+      }
+    },
+    [dispatch]
+  );
 
-  const editTodo = useCallback(async (taskId: string, updates: Partial<Task>) => {
-    try {
-      dispatch(addLoadingTaskId(taskId));
-      const result = await todoService.editTask(taskId, updates);
-      dispatch(setTasks([...result.tasks]));
-      dispatch(removeLoadingTaskId(taskId));
-    } catch (error) {
-      dispatch(removeLoadingTaskId(taskId));
-      dispatch(setError(error instanceof Error ? error.message : 'Failed to edit task'));
-    }
-  }, [dispatch]);
+  const editTodo = useCallback(
+    async (taskId: string, updates: Partial<Task>) => {
+      try {
+        dispatch(addLoadingTaskId(taskId));
+        const result = await todoService.editTask(taskId, updates);
+        dispatch(setTasks([...result.tasks]));
+        dispatch(removeLoadingTaskId(taskId));
+      } catch (error) {
+        dispatch(removeLoadingTaskId(taskId));
+        dispatch(setError(error instanceof Error ? error.message : 'Failed to edit task'));
+      }
+    },
+    [dispatch]
+  );
 
-  const deleteTodo = useCallback(async (taskId: string) => {
-    try {
-      dispatch(addLoadingTaskId(taskId));
-      const result = await todoService.deleteTask(taskId);
-      dispatch(setTasks([...result.tasks]));
-      dispatch(removeLoadingTaskId(taskId));
-    } catch (error) {
-      dispatch(removeLoadingTaskId(taskId));
-      dispatch(setError(error instanceof Error ? error.message : 'Failed to delete task'));
-    }
-  }, [dispatch]);
+  const deleteTodo = useCallback(
+    async (taskId: string) => {
+      try {
+        dispatch(addLoadingTaskId(taskId));
+        const result = await todoService.deleteTask(taskId);
+        dispatch(setTasks([...result.tasks]));
+        dispatch(removeLoadingTaskId(taskId));
+      } catch (error) {
+        dispatch(removeLoadingTaskId(taskId));
+        dispatch(setError(error instanceof Error ? error.message : 'Failed to delete task'));
+      }
+    },
+    [dispatch]
+  );
 
   const fetchTasks = useCallback(async () => {
     dispatch(setLoading(true));

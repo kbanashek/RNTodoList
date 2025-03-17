@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Task } from './types';
+import { Task } from '../types';
 
 export interface TodoState {
   tasks: Task[];
@@ -39,5 +39,6 @@ export const todoSlice = createSlice({
   },
 });
 
-export const { setTasks, setLoading, setError, addLoadingTaskId, removeLoadingTaskId } = todoSlice.actions;
+export const { setTasks, setLoading, setError, addLoadingTaskId, removeLoadingTaskId } =
+  todoSlice.actions;
 export default todoSlice.reducer;

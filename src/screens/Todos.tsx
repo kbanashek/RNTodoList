@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Text } from 'react-native-paper';
 import { AddTodoForm } from '../components/AddTodoForm';
 import { TodoList } from '../components/TodoList';
-import { useTodos } from '../hooks/useTodos';
+import { useTodos } from '../hooks//todos/useTodos';
 
 export const Todos: React.FC = () => {
   const { tasks, isLoading, loadingTaskIds, error, addTodo, editTodo, deleteTodo } = useTodos();
