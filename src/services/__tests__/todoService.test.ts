@@ -1,6 +1,6 @@
 import { TodoService } from '../todoService';
 import { TodoStorage } from '../../storage';
-import { Todo } from '../../store/types';
+import { mockTodos, mockTodoServiceConfig, mockApiResponse } from '../../../__mocks__/mockData';
 
 // Mock the TodoStorage module
 jest.mock('../../storage/todoStorage');
@@ -20,39 +20,24 @@ describe('TodoService', () => {
     jest.clearAllMocks();
   });
 
-  const mockConfig = {
-    baseUrl: 'https://dummyjson.com',
-    userId: 1
-  };
-
-  const mockTasks: Todo[] = [
-    {
-      id: 'task_123',
-      title: 'Local Task',
-      completed: false,
-      createdAt: '2025-03-18T10:00:00.000Z',
-      updatedAt: '2025-03-18T10:00:00.000Z'
-    }
-  ];
-
   describe('init', () => {
     it('loads tasks from local storage', async () => {
       // Setup
-      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTasks]);
-      const todoService = new TodoService(mockConfig);
+      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTodos]);
+      const todoService = new TodoService(mockTodoServiceConfig);
       
       // Execute
       const result = await todoService.init();
       
       // Verify
       expect(TodoStorage.getTodos).toHaveBeenCalled();
-      expect(result.tasks).toEqual(mockTasks);
+      expect(result.tasks).toEqual(mockTodos);
     });
 
     it('handles errors during initialization', async () => {
       // Setup
       (TodoStorage.getTodos as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
-      const todoService = new TodoService(mockConfig);
+      const todoService = new TodoService(mockTodoServiceConfig);
       
       // Execute
       const result = await todoService.init();
@@ -70,9 +55,9 @@ describe('TodoService', () => {
   describe('addTask', () => {
     it('adds a new task to the beginning of the list', async () => {
       // Setup
-      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTasks]);
+      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTodos]);
       (TodoStorage.saveTodos as jest.Mock).mockResolvedValueOnce(undefined);
-      const todoService = new TodoService(mockConfig);
+      const todoService = new TodoService(mockTodoServiceConfig);
       await todoService.init();
       
       // Execute
@@ -83,15 +68,15 @@ describe('TodoService', () => {
       expect(result.tasks[0].title).toBe(title);
       expect(result.tasks[0].completed).toBe(false);
       expect(result.tasks[0].id).toMatch(/^task_/);
-      expect(result.tasks.length).toBe(mockTasks.length + 1);
+      expect(result.tasks.length).toBe(mockTodos.length + 1);
       expect(TodoStorage.saveTodos).toHaveBeenCalled();
     });
 
     it('handles errors when adding a task', async () => {
       // Setup
-      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTasks]);
+      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTodos]);
       (TodoStorage.saveTodos as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
-      const todoService = new TodoService(mockConfig);
+      const todoService = new TodoService(mockTodoServiceConfig);
       await todoService.init();
       
       // Execute & Verify
@@ -106,9 +91,9 @@ describe('TodoService', () => {
   describe('editTask', () => {
     it('updates an existing task', async () => {
       // Setup
-      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTasks]);
+      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTodos]);
       (TodoStorage.saveTodos as jest.Mock).mockResolvedValueOnce(undefined);
-      const todoService = new TodoService(mockConfig);
+      const todoService = new TodoService(mockTodoServiceConfig);
       await todoService.init();
       
       // Execute
@@ -116,10 +101,10 @@ describe('TodoService', () => {
         title: 'Updated Task',
         completed: true
       };
-      const result = await todoService.editTask('task_123', updates);
+      const result = await todoService.editTask(mockTodos[0].id, updates);
       
       // Verify
-      const updatedTask = result.tasks.find(t => t.id === 'task_123');
+      const updatedTask = result.tasks.find(t => t.id === mockTodos[0].id);
       expect(updatedTask).toBeDefined();
       expect(updatedTask?.title).toBe('Updated Task');
       expect(updatedTask?.completed).toBe(true);
@@ -128,8 +113,8 @@ describe('TodoService', () => {
 
     it('throws an error if task is not found', async () => {
       // Setup
-      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTasks]);
-      const todoService = new TodoService(mockConfig);
+      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTodos]);
+      const todoService = new TodoService(mockTodoServiceConfig);
       await todoService.init();
       
       // Execute & Verify
@@ -145,24 +130,24 @@ describe('TodoService', () => {
   describe('deleteTask', () => {
     it('removes a task from the list', async () => {
       // Setup
-      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTasks]);
+      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTodos]);
       (TodoStorage.saveTodos as jest.Mock).mockResolvedValueOnce(undefined);
-      const todoService = new TodoService(mockConfig);
+      const todoService = new TodoService(mockTodoServiceConfig);
       await todoService.init();
       
       // Execute
-      const result = await todoService.deleteTask('task_123');
+      const result = await todoService.deleteTask(mockTodos[0].id);
       
       // Verify
-      expect(result.tasks.find(t => t.id === 'task_123')).toBeUndefined();
-      expect(result.tasks.length).toBe(0);
+      expect(result.tasks.find(t => t.id === mockTodos[0].id)).toBeUndefined();
+      expect(result.tasks.length).toBe(mockTodos.length - 1);
       expect(TodoStorage.saveTodos).toHaveBeenCalled();
     });
 
     it('throws an error if task is not found', async () => {
       // Setup
-      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTasks]);
-      const todoService = new TodoService(mockConfig);
+      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTodos]);
+      const todoService = new TodoService(mockTodoServiceConfig);
       await todoService.init();
       
       // Execute & Verify
@@ -179,7 +164,7 @@ describe('TodoService', () => {
     it('clears all tasks from storage', async () => {
       // Setup
       (TodoStorage.clearTodos as jest.Mock).mockResolvedValueOnce(undefined);
-      const todoService = new TodoService(mockConfig);
+      const todoService = new TodoService(mockTodoServiceConfig);
       
       // Execute
       await todoService.clearStorage();
@@ -191,7 +176,7 @@ describe('TodoService', () => {
     it('handles errors when clearing storage', async () => {
       // Setup
       (TodoStorage.clearTodos as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
-      const todoService = new TodoService(mockConfig);
+      const todoService = new TodoService(mockTodoServiceConfig);
       
       // Execute & Verify
       await expect(todoService.clearStorage()).rejects.toThrow('Storage error');
@@ -218,26 +203,15 @@ describe('TodoService', () => {
 
     it('fetches tasks from API and merges with local tasks', async () => {
       // Setup
-      const mockApiResponse = {
-        todos: [
-          {
-            id: 1,
-            todo: 'API Task 1',
-            completed: false,
-            userId: 1
-          }
-        ]
-      };
-      
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValueOnce(mockApiResponse)
       });
       
-      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTasks]);
+      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTodos]);
       (TodoStorage.saveTodos as jest.Mock).mockResolvedValueOnce(undefined);
       
-      const todoService = new TodoService(mockConfig);
+      const todoService = new TodoService(mockTodoServiceConfig);
       await todoService.init();
       
       // Execute
@@ -249,7 +223,7 @@ describe('TodoService', () => {
       );
       
       // Should have both local and API tasks
-      expect(result.tasks.length).toBeGreaterThan(mockTasks.length);
+      expect(result.tasks.length).toBeGreaterThan(mockTodos.length);
       expect(TodoStorage.saveTodos).toHaveBeenCalled();
     });
 
@@ -260,8 +234,8 @@ describe('TodoService', () => {
         status: 404
       });
       
-      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTasks]);
-      const todoService = new TodoService(mockConfig);
+      (TodoStorage.getTodos as jest.Mock).mockResolvedValueOnce([...mockTodos]);
+      const todoService = new TodoService(mockTodoServiceConfig);
       await todoService.init();
       
       // Execute & Verify
