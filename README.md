@@ -1,6 +1,6 @@
 # RNTodoList
 
-A React Native todo app with robust offline support and sync capabilities. Built with Expo, TypeScript, and Redux Toolkit.
+A React Native todo app with local-first task management and offline support. Built with Expo, TypeScript, and Redux Toolkit.
 
 ![
   App Screenshot
@@ -8,61 +8,61 @@ A React Native todo app with robust offline support and sync capabilities. Built
 
 ## Core Features
 
-- **State Management**
-
-  - Redux Toolkit for state updates
+- **Redux State Management**
+  - Centralized state with Redux Toolkit
+  - Efficient updates using Immer
+  - Loading states per task ID
+  - Set middleware for loadingTaskIds
   - Optimistic UI updates
-  - Memoized selectors
 
-- **Offline-First Architecture**
-
-  - Local storage with AsyncStorage
-  - Initial data from DummyJSON API
-  - Local-first operations
-  - Background sync on reconnect
+- **Local-First Architecture**
+  - Initial data fetch from DummyJSON API
+  - Local task operations
+  - AsyncStorage for persistence
+  - Responsive network status monitoring
   - Optimistic UI updates
 
 - **Task Management**
-
-  - Create, edit, and delete tasks
-  - Local operations with sync
-  - Loading states per task ID
-  - Newest tasks first
+  - Add, edit, and delete tasks locally
   - Offline data persistence
+  - Modern task UI with React Native Paper
+  - Timestamps for creation and updates
+  - Optimistic updates for better UX
 
 - **Network Handling**
-  - Real-time connection monitoring
-  - Internet reachability checks
-  - Clear offline indicators
-  - Automatic data sync
-  - Error recovery
+  - Real-time connection monitoring with expo-network v7.0.5
+  - Rapid polling (3s offline, 5s online)
+  - Fast connection recovery detection
+  - Connection type detection (WiFi, Cellular, etc.)
+  - Internet reachability verification
+  - Visual offline indicators
+  - Proper cleanup with mounted flag
 
 ## Tech Stack
 
-- React Native + Expo
-- TypeScript for type safety
-- Redux Toolkit with Immer
-- AsyncStorage for offline data
-- React Native Paper UI
-- Jest + React Testing Library
-- Husky for Git hooks
+- React Native + Expo 49
+- TypeScript
+- Redux Toolkit
+- AsyncStorage
+- expo-network v7.0.5
+- React Native Paper
+- Jest + Testing Library
+- ESLint + Prettier
+- Husky
 
 ## Quick Start
 
 1. Install dependencies:
-
 ```bash
 npm install
 ```
 
 2. Start the Expo server:
-
 ```bash
 npm start
 ```
 
 3. Run on device:
-
 - Install Expo Go on your iOS/Android device
 - Scan the QR code from terminal
 - Or press 'i' for iOS simulator / 'a' for Android
@@ -70,7 +70,6 @@ npm start
 ## Development
 
 ### Test Suite
-
 ```bash
 npm test           # Run Jest tests
 npm run lint       # Run ESLint
@@ -92,66 +91,78 @@ pre-push:          # Run before each push
 ```
 
 ### Project Structure
-
 ```
 src/
-├── components/    # UI components
-├── hooks/        # Redux-integrated hooks for todos and network
-├── services/     # TodoService with offline-first operations
-├── storage/      # Task storage and offline persistence
-├── store/        # Redux store and slices
+├── components/    # Reusable UI components
+│   └── NetworkStatusBar.tsx   # Network status indicator
+├── hooks/
+│   ├── network/  # Network status monitoring
+│   └── todos/    # Task management hooks
+├── services/     # TodoService with local storage
+├── store/
+│   └── slices/   # Redux slices (todos, network)
 └── types/        # TypeScript definitions
 ```
 
-### Key Implementation Details
+### Architecture Evolution
 
-- **Redux Integration**
+#### State Management
+- Migrated from local React state to Redux
+- Implemented Redux Toolkit with Immer
+- Centralized task state in store
+- Added loading states per task ID
+- Maintained optimistic updates
 
-  - Migrated from React state
-  - Immer for immutability
-  - Set middleware for loading
-  - Memoized selectors
-  - Optimistic updates
-  - Efficient state updates
+#### Local Storage
+- Simplified to local-first operations
+- Initial data from DummyJSON API
+- AsyncStorage for persistence
+- Immediate local updates
+- Preserved offline support
 
-- **Task Interface**
+#### Network Monitoring
+- Integrated expo-network v7.0.5 for status checks
+- Optimized polling intervals for responsiveness
+  - 3s checks when offline (quick recovery)
+  - 5s checks when online (reduced battery impact)
+- Added proper cleanup with mounted flag
+- Enhanced error handling
+- Clear offline status indication
 
-  - Unique task ID
-  - Title and completion status
-  - Creation timestamp
-  - Update timestamp
-  - Sync status tracking
+### Key Features
 
-- **Offline Support**
+#### Task Management
+- Local task operations
+- Persistent storage
+- Modern UI components
+- Creation/update timestamps
+- Optimistic updates
 
-  - AsyncStorage persistence
-  - Immediate UI updates
-  - Background sync queue
-  - Network error recovery
-  - Local state priority
-  - Sync status tracking
+#### Network Status
+- Optimized polling intervals
+  - 3s offline for fast recovery
+  - 5s online for efficiency
+- Connection type detection
+- Internet reachability checks
+- Visual offline indicators
+- Auto-reconnect handling
+- Proper cleanup on unmount
 
-- **Storage Architecture**
+#### Type Safety
+- Comprehensive TypeScript coverage
+- Redux state types
+- Network state interfaces
+- Task type definitions
+- Strict null checks
 
-  - AsyncStorage for persistence
-  - JSON serialization
-  - Optimized batch operations
-  - Error handling with fallbacks
+## Testing
 
-- **Network State**
-
-  - Connection type detection
-  - Internet reachability
-  - Last check timestamp
-  - Status monitoring
-  - Auto-reconnect handling
-
-- **Type Safety**
-  - Full TypeScript coverage
-  - Redux state typing
-  - Network state interface
-  - Task type definitions
-  - Strict null checks
+### Network Testing
+- Development mode testing UI
+- Simulated network states
+- Mock responses match expo-network structure
+- Real-time status display
+- Error simulation support
 
 ## Planned Features
 
