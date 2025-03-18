@@ -1,13 +1,13 @@
-import { Task, TodoServiceConfig } from '../store/types';
+import { Todo, TodoServiceConfig } from '../store/types';
 import { TodoStorage } from '../storage';
 
 export class TodoService {
-  private tasks: Task[] = [];
+  private tasks: Todo[] = [];
   private hasLoadedFromStorage = false;
 
   constructor(private readonly API_CONFIG: TodoServiceConfig) {}
 
-  public async init(): Promise<{ tasks: Task[] }> {
+  public async init(): Promise<{ tasks: Todo[] }> {
     try {
       this.tasks = await TodoStorage.getTodos();
       this.hasLoadedFromStorage = true;
@@ -18,7 +18,7 @@ export class TodoService {
     }
   }
 
-  public async fetchTasks(): Promise<{ tasks: Task[] }> {
+  public async fetchTasks(): Promise<{ tasks: Todo[] }> {
     try {
       // First load local tasks if we haven't already
       if (!this.hasLoadedFromStorage) {
@@ -62,12 +62,12 @@ export class TodoService {
     }
   }
 
-  public async addTask(title: string): Promise<{ tasks: Task[] }> {
+  public async addTask(title: string): Promise<{ tasks: Todo[] }> {
     try {
       const now = new Date().toISOString();
       const taskId = this.generateId('task');
 
-      const newTask: Task = {
+      const newTask: Todo = {
         id: taskId,
         title,
         completed: false,
@@ -86,7 +86,7 @@ export class TodoService {
     }
   }
 
-  public async editTask(taskId: string, updates: Partial<Task>): Promise<{ tasks: Task[] }> {
+  public async editTask(taskId: string, updates: Partial<Todo>): Promise<{ tasks: Todo[] }> {
     try {
       const taskIndex = this.tasks.findIndex(t => t.id === taskId);
 
@@ -113,7 +113,7 @@ export class TodoService {
     }
   }
 
-  public async deleteTask(taskId: string): Promise<{ tasks: Task[] }> {
+  public async deleteTask(taskId: string): Promise<{ tasks: Todo[] }> {
     try {
       const taskIndex = this.tasks.findIndex(t => t.id === taskId);
 

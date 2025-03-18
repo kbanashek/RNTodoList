@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { Task } from '../../store/types';
+import { Todo } from '../../store/types';
 import { TodoService } from '../../services/todoService';
 import { useNetworkStatus } from '../network/useNetworkStatus';
 import { useAppDispatch, useAppSelector } from '../../store';
@@ -61,7 +61,7 @@ export const useTodos = () => {
   );
 
   const editTodo = useCallback(
-    async (taskId: string, updates: Partial<Task>) => {
+    async (taskId: string, updates: Partial<Todo>) => {
       try {
         dispatch(addLoadingTaskId(taskId));
         const result = await todoService.editTask(taskId, updates);

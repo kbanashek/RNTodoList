@@ -1,11 +1,11 @@
-import React from "react";
-import { View, FlatList, StyleSheet } from "react-native";
-import { ActivityIndicator, Text } from "react-native-paper";
-import { Task } from "../store/types";
-import { TodoListItem } from "./TodoListItem";
+import React from 'react';
+import { View, FlatList, StyleSheet } from 'react-native';
+import { ActivityIndicator, Text } from 'react-native-paper';
+import { Todo } from '../store/types';
+import { TodoListItem } from './TodoListItem';
 
 interface TodoListProps {
-  tasks: Task[];
+  tasks: Todo[];
   isLoading: boolean;
   loadingTaskIds: string[];
   error: string | null;
@@ -35,9 +35,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={[styles.messageText, styles.errorText]}>
-          Error: {error}
-        </Text>
+        <Text style={[styles.messageText, styles.errorText]}>Error: {error}</Text>
       </View>
     );
   }
@@ -53,7 +51,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   return (
     <FlatList
       data={tasks}
-      keyExtractor={(item) => item.id}
+      keyExtractor={item => item.id}
       renderItem={({ item }) => (
         <TodoListItem
           task={item}
@@ -78,21 +76,21 @@ const styles = StyleSheet.create({
   },
   centerContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
   },
   emptyText: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 16,
   },
   messageText: {
     marginTop: 8,
     fontSize: 16,
-    color: "#ffffff",
-    textAlign: "center",
+    color: '#ffffff',
+    textAlign: 'center',
   },
   errorText: {
-    color: "#cf6679",
+    color: '#cf6679',
   },
 });

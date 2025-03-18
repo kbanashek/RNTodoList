@@ -1,16 +1,10 @@
-import React, { useState } from "react";
-import { StyleSheet, View, Pressable } from "react-native";
-import {
-  Card,
-  TextInput,
-  Text,
-  ActivityIndicator,
-  IconButton,
-} from "react-native-paper";
-import { Task } from "../store/types";
+import React, { useState } from 'react';
+import { StyleSheet, View, Pressable } from 'react-native';
+import { Card, TextInput, Text, ActivityIndicator, IconButton } from 'react-native-paper';
+import { Todo } from '../store/types';
 
 interface TodoListItemProps {
-  task: Task;
+  task: Todo;
   isLoading?: boolean;
   onToggleComplete: (taskId: string, completed: boolean) => void;
   onDeleteTask: (taskId: string) => void;
@@ -44,22 +38,15 @@ export const TodoListItem = ({
     <Card style={styles.container}>
       <View style={styles.content}>
         <View
-          style={[
-            styles.checkboxContainer,
-            task.completed && styles.checkboxContainerCompleted,
-          ]}
+          style={[styles.checkboxContainer, task.completed && styles.checkboxContainerCompleted]}
         >
           {isLoading ? (
             <ActivityIndicator size={20} color="#bb86fc" />
           ) : (
             <IconButton
-              icon={task.completed ? "check-circle-outline" : "circle-outline"}
-              onPress={() =>
-                !isLoading && onToggleComplete(task.id, !task.completed)
-              }
-              iconColor={
-                task.completed ? "#bb86fc" : "rgba(255, 255, 255, 0.7)"
-              }
+              icon={task.completed ? 'check-circle-outline' : 'circle-outline'}
+              onPress={() => !isLoading && onToggleComplete(task.id, !task.completed)}
+              iconColor={task.completed ? '#bb86fc' : 'rgba(255, 255, 255, 0.7)'}
               size={36}
               disabled={isLoading}
             />
@@ -82,17 +69,11 @@ export const TodoListItem = ({
                 <TextInput.Icon
                   icon="check"
                   onPress={handleSave}
-                  disabled={
-                    isLoading ||
-                    !editedTitle.trim() ||
-                    editedTitle.trim() === task.title
-                  }
+                  disabled={isLoading || !editedTitle.trim() || editedTitle.trim() === task.title}
                   color={
-                    isLoading ||
-                    !editedTitle.trim() ||
-                    editedTitle.trim() === task.title
-                      ? "rgba(255, 255, 255, 0.3)"
-                      : "#bb86fc"
+                    isLoading || !editedTitle.trim() || editedTitle.trim() === task.title
+                      ? 'rgba(255, 255, 255, 0.3)'
+                      : '#bb86fc'
                   }
                 />
               }
@@ -115,12 +96,12 @@ export const TodoListItem = ({
             <Pressable onPress={handleCancel} style={{ width: 20, height: 20 }}>
               <Text
                 style={{
-                  position: "absolute",
-                  color: "#cf6679",
+                  position: 'absolute',
+                  color: '#cf6679',
                   fontSize: 16,
                   top: 0,
                   left: 0,
-                  fontWeight: "600",
+                  fontWeight: '600',
                 }}
               >
                 ×
@@ -148,26 +129,26 @@ export const TodoListItem = ({
       </View>
     </Card>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginVertical: 4,
-    backgroundColor: "#333333",
+    backgroundColor: '#333333',
     elevation: 2,
     borderRadius: 8,
   },
   content: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 12,
   },
   checkboxContainer: {
     width: 40,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 4,
   },
   checkboxContainerCompleted: {
@@ -180,10 +161,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    color: "#ffffff",
+    color: '#ffffff',
   },
   completedTitle: {
-    textDecorationLine: "line-through",
+    textDecorationLine: 'line-through',
     opacity: 0.7,
   },
   loadingTitle: {
@@ -191,10 +172,10 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
   },
   actions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

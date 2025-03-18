@@ -1,8 +1,8 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Task } from '../types';
+import { Todo } from '../types';
 
 export interface TodoState {
-  tasks: Task[];
+  tasks: Todo[];
   isLoading: boolean;
   error: string | null;
   loadingTaskIds: string[];
@@ -19,7 +19,7 @@ export const todoSlice = createSlice({
   name: 'todos',
   initialState,
   reducers: {
-    setTasks: (state, action: PayloadAction<Task[]>) => {
+    setTasks: (state, action: PayloadAction<Todo[]>) => {
       state.tasks = action.payload;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
