@@ -28,6 +28,7 @@ export const AddTodoForm: React.FC<AddTodoFormProps> = ({ onSubmit }) => {
   return (
     <View style={styles.container}>
       <TextInput
+        testID="add-todo-input"
         value={title}
         onChangeText={setTitle}
         onSubmitEditing={handleSubmit}
@@ -40,6 +41,7 @@ export const AddTodoForm: React.FC<AddTodoFormProps> = ({ onSubmit }) => {
         activeOutlineColor="#bb86fc"
         right={
           <TextInput.Icon
+            testID="add-todo-button"
             icon="plus"
             onPress={handleSubmit}
             disabled={!title.trim() || isSubmitting}
