@@ -25,31 +25,32 @@ export const TodoList: React.FC<TodoListProps> = ({
 }) => {
   if (isLoading && tasks.length === 0) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={styles.centerContainer} testID="loading-container">
         <ActivityIndicator size="large" color="#bb86fc" />
-        <Text style={styles.messageText}>Loading tasks...</Text>
+        <Text style={styles.messageText} testID="loading-text">Loading tasks...</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={[styles.messageText, styles.errorText]}>Error: {error}</Text>
+      <View style={styles.centerContainer} testID="error-container">
+        <Text style={[styles.messageText, styles.errorText]} testID="error-text">Error: {error}</Text>
       </View>
     );
   }
 
   if (tasks.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>No tasks yet. Add one above!</Text>
+      <View style={styles.centerContainer} testID="empty-container">
+        <Text style={styles.emptyText} testID="empty-text">No tasks yet. Add one above!</Text>
       </View>
     );
   }
 
   return (
     <FlatList
+      testID="todo-list"
       data={tasks}
       keyExtractor={item => item.id}
       renderItem={({ item }) => (

@@ -6,9 +6,12 @@ A React Native todo app with local-first task management and offline support. Bu
   App Screenshot
 ](image-2.png)
 
+![alt text](image-3.png)
+
 ## Core Features
 
 - **Redux State Management**
+
   - Centralized state with Redux Toolkit
   - Efficient updates using Immer
   - Loading states per task ID
@@ -16,6 +19,7 @@ A React Native todo app with local-first task management and offline support. Bu
   - Optimistic UI updates
 
 - **Local-First Architecture**
+
   - Initial data fetch from DummyJSON API
   - Local task operations
   - AsyncStorage for persistence
@@ -23,6 +27,7 @@ A React Native todo app with local-first task management and offline support. Bu
   - Optimistic UI updates
 
 - **Task Management**
+
   - Add, edit, and delete tasks locally
   - Offline data persistence
   - Modern task UI with React Native Paper
@@ -53,16 +58,19 @@ A React Native todo app with local-first task management and offline support. Bu
 ## Quick Start
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Start the Expo server:
+
 ```bash
 npm start
 ```
 
 3. Run on device:
+
 - Install Expo Go on your iOS/Android device
 - Scan the QR code from terminal
 - Or press 'i' for iOS simulator / 'a' for Android
@@ -70,6 +78,7 @@ npm start
 ## Development
 
 ### Test Suite
+
 ```bash
 npm test           # Run Jest tests
 npm run lint       # Run ESLint
@@ -91,6 +100,7 @@ pre-push:          # Run before each push
 ```
 
 ### Project Structure
+
 ```
 src/
 ├── components/    # Reusable UI components
@@ -107,6 +117,7 @@ src/
 ### Architecture Evolution
 
 #### State Management
+
 - Migrated from local React state to Redux
 - Implemented Redux Toolkit with Immer
 - Centralized task state in store
@@ -114,6 +125,7 @@ src/
 - Maintained optimistic updates
 
 #### Local Storage
+
 - Simplified to local-first operations
 - Initial data from DummyJSON API
 - AsyncStorage for persistence
@@ -121,6 +133,7 @@ src/
 - Preserved offline support
 
 #### Network Monitoring
+
 - Integrated expo-network v7.0.5 for status checks
 - Optimized polling intervals for responsiveness
   - 3s checks when offline (quick recovery)
@@ -132,6 +145,7 @@ src/
 ### Key Features
 
 #### Task Management
+
 - Local task operations
 - Persistent storage
 - Modern UI components
@@ -139,6 +153,7 @@ src/
 - Optimistic updates
 
 #### Network Status
+
 - Optimized polling intervals
   - 3s offline for fast recovery
   - 5s online for efficiency
@@ -149,6 +164,7 @@ src/
 - Proper cleanup on unmount
 
 #### Type Safety
+
 - Comprehensive TypeScript coverage
 - Redux state types
 - Network state interfaces
@@ -158,6 +174,7 @@ src/
 ## Testing
 
 ### Network Testing
+
 - Development mode testing UI
 - Simulated network states
 - Mock responses match expo-network structure
