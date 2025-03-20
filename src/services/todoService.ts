@@ -53,8 +53,17 @@ export class TodoService {
       const localTasks = this.tasks.filter(task => task.id.startsWith('task_'));
       this.tasks = [...localTasks, ...apiTasks];
 
-      // Save merged tasks to storage
-      await TodoStorage.saveTodos(this.tasks);
+      // Save merged tasks to storage using individual CRUD operations
+      for (const task of this.tasks) {
+        if (localTasks.includes(task)) {
+          // Update existing task
+          await TodoStorage.updateTodo(task.id, task);
+        } else {
+          // Add new task
+          await TodoStorage.addTodo(task);
+        }
+      }
+
       return { tasks: [...this.tasks] };
     } catch (error) {
       console.error('Error fetching tasks:', error);
@@ -75,9 +84,11 @@ export class TodoService {
         updatedAt: now,
       };
 
-      // Create new array with the new task at the beginning
+      // Add the new task to Realm
+      await TodoStorage.addTodo(newTask);
+      
+      // Update our local array
       this.tasks = [newTask, ...this.tasks];
-      await TodoStorage.saveTodos(this.tasks);
 
       return { tasks: [...this.tasks] };
     } catch (error) {
@@ -94,18 +105,22 @@ export class TodoService {
         throw new Error(`Task not found: ${taskId}`);
       }
 
-      // Create new array with updated task
+      // Update the task in Realm
+      await TodoStorage.updateTodo(taskId, updates);
+      
+      // Update our local array
+      const updatedTask = {
+        ...this.tasks[taskIndex],
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+      
       this.tasks = [
         ...this.tasks.slice(0, taskIndex),
-        {
-          ...this.tasks[taskIndex],
-          ...updates,
-          updatedAt: new Date().toISOString(),
-        },
+        updatedTask,
         ...this.tasks.slice(taskIndex + 1),
       ];
 
-      await TodoStorage.saveTodos(this.tasks);
       return { tasks: [...this.tasks] };
     } catch (error) {
       console.error('Error editing task:', error);
@@ -121,10 +136,12 @@ export class TodoService {
         throw new Error(`Task not found: ${taskId}`);
       }
 
-      // Create new array without the deleted task
+      // Delete the task from Realm
+      await TodoStorage.deleteTodo(taskId);
+      
+      // Update our local array
       this.tasks = [...this.tasks.slice(0, taskIndex), ...this.tasks.slice(taskIndex + 1)];
 
-      await TodoStorage.saveTodos(this.tasks);
       return { tasks: [...this.tasks] };
     } catch (error) {
       console.error('Error deleting task:', error);
@@ -145,5 +162,9 @@ export class TodoService {
       console.error('Error clearing storage:', error);
       throw error;
     }
+  }
+  
+  public closeDatabase(): void {
+    TodoStorage.closeRealm();
   }
 }

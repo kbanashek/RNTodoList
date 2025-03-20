@@ -1,11 +1,15 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TodoStorage } from '../todoStorage';
 import { mockTodos } from '../../../__mocks__/mockData';
+import { Todo } from '../../store/types';
 
-// Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage');
+// Import the mocked Realm module
+jest.mock('realm');
+import Realm from 'realm';
 
 describe('TodoStorage', () => {
+  // Get the mock Realm instance
+  const mockRealm = (Realm as any)._mockRealmInstance;
+  
   // Mock console.error
   const originalConsoleError = console.error;
   
@@ -19,172 +23,302 @@ describe('TodoStorage', () => {
   
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Set up mock collection for objects() method
+    const mockCollection = Array.from(mockTodos).map(task => ({
+      id: task.id,
+      title: task.title,
+      completed: task.completed,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+    }));
+    
+    // Add Array.from support
+    Object.defineProperty(mockCollection, 'forEach', {
+      value: jest.fn(callback => mockTodos.forEach(callback)),
+    });
+    
+    mockRealm.objects.mockReturnValue(mockCollection);
+    
+    // Reset the static realm instance
+    (TodoStorage as any).realm = null;
   });
   
-  const STORAGE_KEY = '@TodoApp:tasks';
+  afterEach(() => {
+    // Reset the static realm instance
+    (TodoStorage as any).realm = null;
+  });
   
   describe('getTodos', () => {
-    it('returns parsed tasks from AsyncStorage', async () => {
-      // Setup
-      const mockStoredTasks = JSON.stringify(mockTodos);
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(mockStoredTasks);
-      
+    it('returns tasks from Realm database', async () => {
       // Execute
       const result = await TodoStorage.getTodos();
       
       // Verify
-      expect(AsyncStorage.getItem).toHaveBeenCalledWith(STORAGE_KEY);
-      expect(result).toEqual(mockTodos);
+      expect(mockRealm.objects).toHaveBeenCalledWith('Todo');
+      expect(result).toHaveLength(mockTodos.length);
+      expect(result[0]).toHaveProperty('id', mockTodos[0].id);
+      expect(result[0]).toHaveProperty('title', mockTodos[0].title);
     });
     
-    it('returns empty array when no tasks in storage', async () => {
+    it('returns empty array when no tasks in database', async () => {
       // Setup
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
+      mockRealm.objects.mockReturnValueOnce([]);
       
       // Execute
       const result = await TodoStorage.getTodos();
       
       // Verify
-      expect(AsyncStorage.getItem).toHaveBeenCalledWith(STORAGE_KEY);
+      expect(mockRealm.objects).toHaveBeenCalledWith('Todo');
       expect(result).toEqual([]);
     });
     
-    it('handles JSON parse errors gracefully', async () => {
+    it('handles Realm errors gracefully', async () => {
       // Setup
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('invalid-json');
+      mockRealm.objects.mockImplementationOnce(() => {
+        throw new Error('Realm error');
+      });
       
       // Execute
       const result = await TodoStorage.getTodos();
       
       // Verify
-      expect(AsyncStorage.getItem).toHaveBeenCalledWith(STORAGE_KEY);
-      expect(result).toEqual([]);
-      expect(console.error).toHaveBeenCalledWith(
-        'Error getting tasks from storage:',
-        expect.any(Error)
-      );
-    });
-    
-    it('handles AsyncStorage errors gracefully', async () => {
-      // Setup
-      (AsyncStorage.getItem as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
-      
-      // Execute
-      const result = await TodoStorage.getTodos();
-      
-      // Verify
-      expect(AsyncStorage.getItem).toHaveBeenCalledWith(STORAGE_KEY);
       expect(result).toEqual([]);
       expect(console.error).toHaveBeenCalledWith(
-        'Error getting tasks from storage:',
+        'Error getting tasks from Realm:',
         expect.any(Error)
       );
     });
   });
   
   describe('saveTodos', () => {
-    it('saves tasks to AsyncStorage as JSON string', async () => {
-      // Setup
-      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
-      
+    it('saves tasks to Realm database', async () => {
       // Execute
       await TodoStorage.saveTodos(mockTodos);
       
       // Verify
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEY,
-        JSON.stringify(mockTodos)
-      );
+      expect(mockRealm.write).toHaveBeenCalled();
+      expect(mockRealm.delete).toHaveBeenCalled();
+      expect(mockRealm.create).toHaveBeenCalledTimes(mockTodos.length);
     });
     
-    it('throws error when AsyncStorage fails', async () => {
+    it('throws error when Realm fails', async () => {
       // Setup
-      const error = new Error('Storage error');
-      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(error);
+      const error = new Error('Realm error');
+      mockRealm.write.mockImplementationOnce(() => {
+        throw error;
+      });
       
       // Execute & Verify
-      await expect(TodoStorage.saveTodos(mockTodos)).rejects.toThrow('Storage error');
+      await expect(TodoStorage.saveTodos(mockTodos)).rejects.toThrow('Realm error');
       expect(console.error).toHaveBeenCalledWith(
-        'Error saving tasks to storage:',
+        'Error saving tasks to Realm:',
         error
       );
     });
     
     it('handles empty array correctly', async () => {
-      // Setup
-      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
-      
       // Execute
       await TodoStorage.saveTodos([]);
       
       // Verify
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEY,
-        '[]'
-      );
+      expect(mockRealm.write).toHaveBeenCalled();
+      expect(mockRealm.delete).toHaveBeenCalled();
+      expect(mockRealm.create).not.toHaveBeenCalled();
     });
   });
   
-  describe('clearTodos', () => {
-    it('removes tasks from AsyncStorage', async () => {
+  describe('addTodo', () => {
+    it('adds a single todo to Realm database', async () => {
       // Setup
-      (AsyncStorage.removeItem as jest.Mock).mockResolvedValueOnce(undefined);
+      const newTodo = mockTodos[0];
       
       // Execute
-      await TodoStorage.clearTodos();
+      await TodoStorage.addTodo(newTodo);
       
       // Verify
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith(STORAGE_KEY);
+      expect(mockRealm.write).toHaveBeenCalled();
+      expect(mockRealm.create).toHaveBeenCalledWith('Todo', {
+        id: newTodo.id,
+        title: newTodo.title,
+        completed: newTodo.completed,
+        createdAt: newTodo.createdAt,
+        updatedAt: newTodo.updatedAt,
+      });
     });
     
-    it('throws error when AsyncStorage fails', async () => {
+    it('throws error when Realm fails', async () => {
       // Setup
-      const error = new Error('Storage error');
-      (AsyncStorage.removeItem as jest.Mock).mockRejectedValueOnce(error);
+      const error = new Error('Realm error');
+      mockRealm.write.mockImplementationOnce(() => {
+        throw error;
+      });
       
       // Execute & Verify
-      await expect(TodoStorage.clearTodos()).rejects.toThrow('Storage error');
+      await expect(TodoStorage.addTodo(mockTodos[0])).rejects.toThrow('Realm error');
       expect(console.error).toHaveBeenCalledWith(
-        'Error clearing tasks from storage:',
+        'Error adding task to Realm:',
         error
       );
     });
   });
   
-  describe('integration between methods', () => {
-    it('can save and then retrieve the same data', async () => {
+  describe('updateTodo', () => {
+    it('updates a todo in Realm database', async () => {
       // Setup
-      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
-      (AsyncStorage.getItem as jest.Mock).mockImplementation(() => {
-        return Promise.resolve(JSON.stringify(mockTodos));
+      const taskId = mockTodos[0].id;
+      const updates = { title: 'Updated Title', completed: true };
+      mockRealm.objectForPrimaryKey.mockReturnValueOnce({
+        title: mockTodos[0].title,
+        completed: mockTodos[0].completed,
+        updatedAt: mockTodos[0].updatedAt,
       });
       
       // Execute
-      await TodoStorage.saveTodos(mockTodos);
-      const retrievedTodos = await TodoStorage.getTodos();
+      await TodoStorage.updateTodo(taskId, updates);
       
       // Verify
-      expect(retrievedTodos).toEqual(mockTodos);
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEY,
-        JSON.stringify(mockTodos)
-      );
-      expect(AsyncStorage.getItem).toHaveBeenCalledWith(STORAGE_KEY);
+      expect(mockRealm.write).toHaveBeenCalled();
+      expect(mockRealm.objectForPrimaryKey).toHaveBeenCalledWith('Todo', taskId);
     });
     
-    it('returns empty array after clearing storage', async () => {
+    it('does nothing if todo not found', async () => {
       // Setup
-      (AsyncStorage.removeItem as jest.Mock).mockResolvedValueOnce(undefined);
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(null);
+      mockRealm.objectForPrimaryKey.mockReturnValueOnce(null);
+      
+      // Execute
+      await TodoStorage.updateTodo('non-existent-id', { title: 'New Title' });
+      
+      // Verify
+      expect(mockRealm.objectForPrimaryKey).toHaveBeenCalledWith('Todo', 'non-existent-id');
+      expect(mockRealm.write).not.toHaveBeenCalled();
+    });
+    
+    it('throws error when Realm fails', async () => {
+      // Setup
+      const error = new Error('Realm error');
+      mockRealm.objectForPrimaryKey.mockImplementationOnce(() => {
+        throw error;
+      });
+      
+      // Execute & Verify
+      await expect(TodoStorage.updateTodo('id', { title: 'New' })).rejects.toThrow('Realm error');
+      expect(console.error).toHaveBeenCalledWith(
+        'Error updating task in Realm:',
+        error
+      );
+    });
+  });
+  
+  describe('deleteTodo', () => {
+    it('deletes a todo from Realm database', async () => {
+      // Setup
+      const taskId = mockTodos[0].id;
+      const todoObject = { id: taskId };
+      mockRealm.objectForPrimaryKey.mockReturnValueOnce(todoObject);
+      
+      // Execute
+      await TodoStorage.deleteTodo(taskId);
+      
+      // Verify
+      expect(mockRealm.write).toHaveBeenCalled();
+      expect(mockRealm.objectForPrimaryKey).toHaveBeenCalledWith('Todo', taskId);
+      expect(mockRealm.delete).toHaveBeenCalledWith(todoObject);
+    });
+    
+    it('does nothing if todo not found', async () => {
+      // Setup
+      mockRealm.objectForPrimaryKey.mockReturnValueOnce(null);
+      
+      // Execute
+      await TodoStorage.deleteTodo('non-existent-id');
+      
+      // Verify
+      expect(mockRealm.objectForPrimaryKey).toHaveBeenCalledWith('Todo', 'non-existent-id');
+      expect(mockRealm.write).not.toHaveBeenCalled();
+    });
+    
+    it('throws error when Realm fails', async () => {
+      // Setup
+      const error = new Error('Realm error');
+      mockRealm.objectForPrimaryKey.mockImplementationOnce(() => {
+        throw error;
+      });
+      
+      // Execute & Verify
+      await expect(TodoStorage.deleteTodo('id')).rejects.toThrow('Realm error');
+      expect(console.error).toHaveBeenCalledWith(
+        'Error deleting task from Realm:',
+        error
+      );
+    });
+  });
+  
+  describe('clearTodos', () => {
+    it('removes all todos from Realm database', async () => {
+      // Setup
+      const allTodos = mockTodos.map(task => ({ ...task }));
+      mockRealm.objects.mockReturnValueOnce(allTodos);
       
       // Execute
       await TodoStorage.clearTodos();
-      const retrievedTodos = await TodoStorage.getTodos();
       
       // Verify
-      expect(retrievedTodos).toEqual([]);
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith(STORAGE_KEY);
-      expect(AsyncStorage.getItem).toHaveBeenCalledWith(STORAGE_KEY);
+      expect(mockRealm.write).toHaveBeenCalled();
+      expect(mockRealm.objects).toHaveBeenCalledWith('Todo');
+      expect(mockRealm.delete).toHaveBeenCalledWith(allTodos);
+    });
+    
+    it('throws error when Realm fails', async () => {
+      // Setup
+      const error = new Error('Realm error');
+      mockRealm.write.mockImplementationOnce(() => {
+        throw error;
+      });
+      
+      // Execute & Verify
+      await expect(TodoStorage.clearTodos()).rejects.toThrow('Realm error');
+      expect(console.error).toHaveBeenCalledWith(
+        'Error clearing tasks from Realm:',
+        error
+      );
+    });
+  });
+  
+  describe('closeRealm', () => {
+    it('closes the Realm instance if it exists and is not closed', () => {
+      // Setup
+      (TodoStorage as any).realm = mockRealm;
+      mockRealm.isClosed = false;
+      
+      // Execute
+      TodoStorage.closeRealm();
+      
+      // Verify
+      expect(mockRealm.close).toHaveBeenCalled();
+    });
+    
+    it('does nothing if Realm instance is already closed', () => {
+      // Setup
+      (TodoStorage as any).realm = mockRealm;
+      mockRealm.isClosed = true;
+      
+      // Execute
+      TodoStorage.closeRealm();
+      
+      // Verify
+      expect(mockRealm.close).not.toHaveBeenCalled();
+    });
+    
+    it('does nothing if Realm instance does not exist', () => {
+      // Setup
+      (TodoStorage as any).realm = null;
+      
+      // Execute
+      TodoStorage.closeRealm();
+      
+      // Verify
+      expect(mockRealm.close).not.toHaveBeenCalled();
     });
   });
 });
