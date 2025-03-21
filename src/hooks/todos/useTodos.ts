@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Todo } from '../../store/types';
 import { TodoService } from '../../services/todoService';
 import { useNetworkStatus } from '../network/useNetworkStatus';
@@ -10,6 +10,8 @@ import {
   addLoadingTaskId,
   removeLoadingTaskId,
 } from '../../store/slices/todoSlice';
+import { Snackbar } from 'react-native-paper';
+import { TodoStorage } from '../../storage';
 
 //TODO: move into .env
 const todoService = new TodoService({
@@ -22,6 +24,11 @@ export const useTodos = () => {
   const { tasks, isLoading, error, loadingTaskIds } = useAppSelector(state => state.todos);
   const networkStatus = useNetworkStatus();
   const isOnline = !networkStatus.isOffline && networkStatus.isInternetReachable;
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarAction, setSnackbarAction] = useState<
+    { label: string; onPress: () => void } | undefined
+  >(undefined);
 
   const loadTodos = useCallback(async () => {
     dispatch(setLoading(true));
@@ -103,6 +110,35 @@ export const useTodos = () => {
     }
   }, [dispatch]);
 
+  const exportTodosAsJson = useCallback(async () => {
+    try {
+      // First export the todos to a file in the app's document directory
+      const filePath = await TodoStorage.exportTodosAsJson();
+      if (!filePath) {
+        throw new Error('Failed to export todos');
+      }
+
+      // Show a success message using Snackbar
+      setSnackbarMessage(
+        "Todos exported. Run 'npm run export-todos' to save them to the realm-data directory."
+      );
+      setSnackbarAction({
+        label: 'OK',
+        onPress: () => setSnackbarVisible(false),
+      });
+      setSnackbarVisible(true);
+    } catch (error) {
+      console.error('Error exporting todos:', error);
+      // Show error message using Snackbar
+      setSnackbarMessage(error instanceof Error ? error.message : 'Export failed');
+      setSnackbarAction({
+        label: 'Dismiss',
+        onPress: () => setSnackbarVisible(false),
+      });
+      setSnackbarVisible(true);
+    }
+  }, []);
+
   useEffect(() => {
     loadTodos();
   }, [loadTodos]);
@@ -117,5 +153,13 @@ export const useTodos = () => {
     deleteTodo,
     loadTodos,
     fetchTasks,
+    exportTodosAsJson,
+    snackbarProps: {
+      visible: snackbarVisible,
+      onDismiss: () => setSnackbarVisible(false),
+      action: snackbarAction,
+      duration: 4000,
+      children: snackbarMessage,
+    },
   };
 };

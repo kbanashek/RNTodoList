@@ -1,5 +1,8 @@
 import Realm from 'realm';
 import { Todo } from '../store/types';
+import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
+import * as path from 'path';
 
 // Define the Realm schema for Todo
 class TodoSchema extends Realm.Object<TodoSchema> {
@@ -24,12 +27,248 @@ class TodoSchema extends Realm.Object<TodoSchema> {
 
 export class TodoStorage {
   private static realm: Realm | null = null;
+  private static readonly DB_NAME = 'rntodolist.realm';
+  private static readonly EXPORT_DIR = 'realm-data';
+  private static readonly PROJECT_EXPORT_DIR = 'realm-data';
+
+  // Get the path to the Realm database file
+  public static getRealmPath(): string {
+    const documentsDir = FileSystem.documentDirectory;
+    return `${documentsDir}${this.DB_NAME}`;
+  }
+
+  // Copy the Realm database to the realm-data directory in the app's document directory
+  public static async copyToProjectDirectory(): Promise<string | null> {
+    try {
+      // First make sure Realm is closed
+      await this.closeRealm();
+      
+      // Wait a moment to ensure file locks are released
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Source path (app's document directory)
+      const sourcePath = this.getRealmPath();
+      
+      // Get document directory
+      const documentDir = FileSystem.documentDirectory;
+      if (!documentDir) {
+        console.error('Could not determine document directory path');
+        return null;
+      }
+
+      // Create a unique filename with timestamp to avoid conflicts
+      const timestamp = new Date().getTime();
+      const targetFilename = `rntodolist_export_${timestamp}.realm`;
+      
+      // Set up target directory
+      const targetDir = `${documentDir}${this.PROJECT_EXPORT_DIR}`;
+      
+      // Create the target directory if it doesn't exist
+      const dirInfo = await FileSystem.getInfoAsync(targetDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(targetDir, { intermediates: true });
+      }
+      
+      // Target path with unique filename
+      const targetPath = `${targetDir}/${targetFilename}`;
+      
+      // Check if source file exists
+      const sourceInfo = await FileSystem.getInfoAsync(sourcePath);
+      if (!sourceInfo.exists) {
+        console.error(`Source file does not exist: ${sourcePath}`);
+        return null;
+      }
+      
+      // Read the source file as a base64 string
+      const content = await FileSystem.readAsStringAsync(sourcePath, { 
+        encoding: FileSystem.EncodingType.Base64 
+      });
+      
+      // Write the content to the target file
+      await FileSystem.writeAsStringAsync(targetPath, content, { 
+        encoding: FileSystem.EncodingType.Base64 
+      });
+      
+      console.log(`Realm database copied to: ${targetPath}`);
+      
+      // Platform-specific guidance
+      if (Platform.OS === 'ios') {
+        console.log('To access this file on iOS:');
+        console.log('1. Open Xcode');
+        console.log('2. Run your app');
+        console.log('3. Go to Window > Devices and Simulators');
+        console.log('4. Select your simulator');
+        console.log('5. Click the "+" button under "Installed Apps"');
+        console.log(`6. Navigate to ${this.PROJECT_EXPORT_DIR}/${targetFilename}`);
+      } else {
+        console.log('To access this file on Android:');
+        console.log('1. Connect to your device/emulator via ADB');
+        console.log(`2. Run: adb pull /data/data/<your-package-name>/files/${this.PROJECT_EXPORT_DIR}/${targetFilename} ./`);
+      }
+      
+      return targetPath;
+    } catch (error) {
+      console.error('Failed to copy Realm database:', error);
+      return null;
+    }
+  }
+
+  // Export the Realm database to the project directory for easier access
+  public static async exportRealmForDevelopment(): Promise<string | null> {
+    try {
+      // Ensure Realm is closed before exporting
+      await this.closeRealm();
+
+      // Source path (app's document directory)
+      const sourcePath = this.getRealmPath();
+
+      // Create export directory if it doesn't exist
+      const exportDir = `${FileSystem.documentDirectory}${this.EXPORT_DIR}`;
+      const dirInfo = await FileSystem.getInfoAsync(exportDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
+      }
+
+      // Target path (in project directory)
+      const targetPath = `${exportDir}/${this.DB_NAME}`;
+
+      // Copy the database file
+      await FileSystem.copyAsync({
+        from: sourcePath,
+        to: targetPath,
+      });
+
+      console.log(`Realm database exported to: ${targetPath}`);
+
+      // Platform-specific guidance
+      if (Platform.OS === 'ios') {
+        console.log('To access this file:');
+        console.log('1. Open Xcode');
+        console.log('2. Run your app');
+        console.log('3. Go to Window > Devices and Simulators');
+        console.log('4. Select your simulator');
+        console.log('5. Click the "+" button under "Installed Apps"');
+        console.log(`6. Navigate to ${this.EXPORT_DIR}/${this.DB_NAME}`);
+      } else {
+        console.log('To access this file:');
+        console.log('1. Connect to your device/emulator via ADB');
+        console.log(
+          `2. Run: adb pull /data/data/<your-package-name>/files/${this.EXPORT_DIR}/${this.DB_NAME} ./`
+        );
+      }
+
+      return targetPath;
+    } catch (error) {
+      console.error('Failed to export Realm database:', error);
+      return null;
+    }
+  }
+
+  // Export todos as JSON to a file in the app's document directory
+  public static async exportTodosAsJson(): Promise<string | null> {
+    try {
+      // Get all todos
+      const todos = await this.getTodos();
+      
+      // Create a timestamp for the filename
+      const timestamp = new Date().getTime();
+      const filename = `todos_${timestamp}.json`;
+      
+      // Get document directory
+      const documentDir = FileSystem.documentDirectory;
+      if (!documentDir) {
+        console.error('Could not determine document directory path');
+        return null;
+      }
+      
+      // Create the file path
+      const filePath = `${documentDir}${filename}`;
+      
+      // Write todos to the file
+      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(todos, null, 2));
+      
+      // Log the path for debugging
+      console.log(`\n==== EXPORT TODOS INFO ====`);
+      console.log(`Todos exported to: ${filePath}`);
+      console.log(`Filename: ${filename}`);
+      console.log(`============================\n`);
+      
+      return filePath;
+    } catch (error) {
+      console.error('Failed to export todos:', error);
+      return null;
+    }
+  }
+
+  // Export todos as JSON directly to the realm-data directory in the project
+  public static async exportTodosToProject(): Promise<string | null> {
+    try {
+      // Get all todos
+      const todos = await this.getTodos();
+      
+      // Create a timestamp for the filename
+      const timestamp = new Date().getTime();
+      const filename = `todos_${timestamp}.json`;
+      
+      // Write to a temporary file in the app's document directory
+      const tempFile = `${FileSystem.documentDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(tempFile, JSON.stringify(todos, null, 2));
+      
+      console.log(`Todos exported to temporary file: ${tempFile}`);
+      console.log('To copy this file to your project\'s realm-data directory:');
+      console.log('1. Run the following command in your project root:');
+      
+      if (Platform.OS === 'ios') {
+        console.log(`   xcrun simctl pbcopy booted < ${tempFile}`);
+        console.log('2. Create a new file in realm-data directory and paste the content');
+      } else {
+        console.log('   Use adb to pull the file from the device:');
+        console.log(`   adb pull ${tempFile} ./realm-data/${filename}`);
+      }
+      
+      return tempFile;
+    } catch (error) {
+      console.error('Failed to export todos:', error);
+      return null;
+    }
+  }
 
   private static async getRealm(): Promise<Realm> {
     if (!this.realm) {
+      const realmPath = this.getRealmPath();
+
+      // Log the path to make it easier to find
+      console.log(`Realm database path: ${realmPath}`);
+
+      // For development, you can also log a more user-friendly message
+      if (__DEV__) {
+        if (Platform.OS === 'ios') {
+          console.log(
+            'To find this file in Realm Studio, look in the iOS simulator Documents directory'
+          );
+          console.log(
+            'Or use TodoStorage.exportRealmForDevelopment() to export it to an accessible location'
+          );
+          console.log(
+            'Or use TodoStorage.copyToProjectDirectory() to copy it to the real-data directory'
+          );
+        } else {
+          console.log(
+            'To find this file in Realm Studio, use adb pull to extract it from the device'
+          );
+          console.log(
+            'Or use TodoStorage.exportRealmForDevelopment() to export it to an accessible location'
+          );
+          console.log(
+            'Or use TodoStorage.copyToProjectDirectory() to copy it to the real-data directory'
+          );
+        }
+      }
+
       this.realm = await Realm.open({
         schema: [TodoSchema],
         schemaVersion: 1,
+        path: realmPath,
       });
     }
     return this.realm;
@@ -39,7 +278,7 @@ export class TodoStorage {
     try {
       const realm = await this.getRealm();
       const realmTodos = realm.objects<TodoSchema>('Todo');
-      
+
       // Convert Realm objects to plain JS objects
       return Array.from(realmTodos).map(todo => ({
         id: todo.id,
@@ -57,21 +296,21 @@ export class TodoStorage {
   static async saveTodos(tasks: Todo[]): Promise<void> {
     try {
       const realm = await this.getRealm();
-      
+
       realm.write(() => {
-        // Clear existing todos
-        const existingTodos = realm.objects('Todo');
-        realm.delete(existingTodos);
-        
-        // Add new todos
+        // Use update mode to handle existing objects
         tasks.forEach(task => {
-          realm.create('Todo', {
-            id: task.id,
-            title: task.title,
-            completed: task.completed,
-            createdAt: task.createdAt,
-            updatedAt: task.updatedAt,
-          });
+          realm.create(
+            'Todo',
+            {
+              id: task.id,
+              title: task.title,
+              completed: task.completed,
+              createdAt: task.createdAt,
+              updatedAt: task.updatedAt,
+            },
+            Realm.UpdateMode.Modified
+          ); // Use the proper enum for update mode
         });
       });
     } catch (error) {
@@ -83,15 +322,27 @@ export class TodoStorage {
   static async addTodo(task: Todo): Promise<void> {
     try {
       const realm = await this.getRealm();
-      
+
       realm.write(() => {
-        realm.create('Todo', {
-          id: task.id,
-          title: task.title,
-          completed: task.completed,
-          createdAt: task.createdAt,
-          updatedAt: task.updatedAt,
-        });
+        // Check if a todo with this ID already exists
+        const existingTodo = realm.objectForPrimaryKey<TodoSchema>('Todo', task.id);
+
+        if (existingTodo) {
+          // Update the existing todo instead of creating a new one
+          existingTodo.title = task.title;
+          existingTodo.completed = task.completed;
+          existingTodo.updatedAt = task.updatedAt;
+          console.log(`Updated existing todo with ID ${task.id} instead of creating a new one`);
+        } else {
+          // Create a new todo
+          realm.create('Todo', {
+            id: task.id,
+            title: task.title,
+            completed: task.completed,
+            createdAt: task.createdAt,
+            updatedAt: task.updatedAt,
+          });
+        }
       });
     } catch (error) {
       console.error('Error adding task to Realm:', error);
@@ -103,7 +354,7 @@ export class TodoStorage {
     try {
       const realm = await this.getRealm();
       const todo = realm.objectForPrimaryKey<TodoSchema>('Todo', taskId);
-      
+
       if (todo) {
         realm.write(() => {
           if (updates.title !== undefined) {
@@ -125,7 +376,7 @@ export class TodoStorage {
     try {
       const realm = await this.getRealm();
       const todo = realm.objectForPrimaryKey<TodoSchema>('Todo', taskId);
-      
+
       if (todo) {
         realm.write(() => {
           realm.delete(todo);
@@ -140,7 +391,7 @@ export class TodoStorage {
   static async clearTodos(): Promise<void> {
     try {
       const realm = await this.getRealm();
-      
+
       realm.write(() => {
         const allTodos = realm.objects('Todo');
         realm.delete(allTodos);
@@ -151,10 +402,12 @@ export class TodoStorage {
     }
   }
 
-  static closeRealm(): void {
-    if (this.realm && !this.realm.isClosed) {
+  // Close the Realm instance
+  public static async closeRealm(): Promise<void> {
+    if (this.realm) {
       this.realm.close();
       this.realm = null;
+      console.log('Realm database closed');
     }
   }
 }

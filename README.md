@@ -1,12 +1,11 @@
 # RNTodoList
 
-A React Native todo app with local-first task management and offline support. Built with Expo, TypeScript, and Redux Toolkit.
+A React Native todo app with local-first task management and offline support. Built with Expo, TypeScript, Redux Toolkit, and Realm.
 
-![
-  App Screenshot
-](image-2.png)
-
-![alt text](image-3.png)
+<div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+  <img src="screenshots/image-2.png" alt="App Screenshot" width="48%" />
+  <img src="screenshots/image-3.png" alt="App Screenshot" width="48%" />
+</div>
 
 ## Core Features
 
@@ -18,11 +17,25 @@ A React Native todo app with local-first task management and offline support. Bu
   - Set middleware for loadingTaskIds
   - Optimistic UI updates
 
+- **Realm Database Integration**
+
+  - Persistent data storage with Realm
+  - TodoSchema with proper TypeScript types
+  - Primary key conflict resolution
+  - Efficient CRUD operations
+  - Proper database lifecycle management
+
+- **Data Export Functionality**
+
+  - Export todos from Realm database as JSON
+  - Timestamped exports in realm-data directory
+  - Simple export via npm script
+  - Proper error handling and logging
+
 - **Local-First Architecture**
 
   - Initial data fetch from DummyJSON API
   - Local task operations
-  - AsyncStorage for persistence
   - Responsive network status monitoring
   - Optimistic UI updates
 
@@ -48,7 +61,7 @@ A React Native todo app with local-first task management and offline support. Bu
 - React Native + Expo 49
 - TypeScript
 - Redux Toolkit
-- AsyncStorage
+- Realm Database
 - expo-network v7.0.5
 - React Native Paper
 - Jest + Testing Library
@@ -85,6 +98,19 @@ npm run lint       # Run ESLint
 npm run format     # Run Prettier
 ```
 
+### Data Export
+
+To export the todos from the Realm database:
+
+1. Run the app in the simulator first to ensure the database exists
+2. Execute the export command:
+
+```bash
+npm run export-todos
+```
+
+3. Exported JSON files will be created in the `realm-data` directory with timestamps
+
 ### Git Hooks
 
 ```bash
@@ -109,9 +135,13 @@ src/
 │   ├── network/  # Network status monitoring
 │   └── todos/    # Task management hooks
 ├── services/     # TodoService with local storage
+├── storage/      # Realm database integration
+│   └── todoStorage.ts   # TodoStorage class for database operations
 ├── store/
 │   └── slices/   # Redux slices (todos, network)
 └── types/        # TypeScript definitions
+scripts/
+└── direct-export.js   # Script for exporting Realm database
 ```
 
 ### Architecture Evolution
@@ -124,13 +154,13 @@ src/
 - Added loading states per task ID
 - Maintained optimistic updates
 
-#### Local Storage
+#### Data Persistence
 
-- Simplified to local-first operations
-- Initial data from DummyJSON API
-- AsyncStorage for persistence
-- Immediate local updates
-- Preserved offline support
+- Migrated from AsyncStorage to Realm database
+- Implemented TodoSchema with proper types
+- Added TodoStorage class for database operations
+- Included database path logging for debugging
+- Added export functionality for data access
 
 #### Network Monitoring
 
@@ -146,8 +176,8 @@ src/
 
 #### Task Management
 
-- Local task operations
-- Persistent storage
+- Local task operations with Realm
+- Persistent storage with proper schema
 - Modern UI components
 - Creation/update timestamps
 - Optimistic updates
@@ -169,6 +199,7 @@ src/
 - Redux state types
 - Network state interfaces
 - Task type definitions
+- Realm schema types
 - Strict null checks
 
 ## Testing

@@ -72,3 +72,12 @@ dist/
 *.tsbuildinfo
 
 
+# iOS
+ios/Podfile.lock
+ios/Podfile
+ios/Podfile.properties.json
+
+# React Native
+android/app/build/outputs
+android/app/build/generated
+android/app/build/reports
