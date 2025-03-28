@@ -42,13 +42,13 @@ export class TodoStorage {
     try {
       // First make sure Realm is closed
       await this.closeRealm();
-      
+
       // Wait a moment to ensure file locks are released
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Source path (app's document directory)
       const sourcePath = this.getRealmPath();
-      
+
       // Get document directory
       const documentDir = FileSystem.documentDirectory;
       if (!documentDir) {
@@ -59,38 +59,38 @@ export class TodoStorage {
       // Create a unique filename with timestamp to avoid conflicts
       const timestamp = new Date().getTime();
       const targetFilename = `rntodolist_export_${timestamp}.realm`;
-      
+
       // Set up target directory
       const targetDir = `${documentDir}${this.PROJECT_EXPORT_DIR}`;
-      
+
       // Create the target directory if it doesn't exist
       const dirInfo = await FileSystem.getInfoAsync(targetDir);
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(targetDir, { intermediates: true });
       }
-      
+
       // Target path with unique filename
       const targetPath = `${targetDir}/${targetFilename}`;
-      
+
       // Check if source file exists
       const sourceInfo = await FileSystem.getInfoAsync(sourcePath);
       if (!sourceInfo.exists) {
         console.error(`Source file does not exist: ${sourcePath}`);
         return null;
       }
-      
+
       // Read the source file as a base64 string
-      const content = await FileSystem.readAsStringAsync(sourcePath, { 
-        encoding: FileSystem.EncodingType.Base64 
+      const content = await FileSystem.readAsStringAsync(sourcePath, {
+        encoding: FileSystem.EncodingType.Base64,
       });
-      
+
       // Write the content to the target file
-      await FileSystem.writeAsStringAsync(targetPath, content, { 
-        encoding: FileSystem.EncodingType.Base64 
+      await FileSystem.writeAsStringAsync(targetPath, content, {
+        encoding: FileSystem.EncodingType.Base64,
       });
-      
+
       console.log(`Realm database copied to: ${targetPath}`);
-      
+
       // Platform-specific guidance
       if (Platform.OS === 'ios') {
         console.log('To access this file on iOS:');
@@ -103,9 +103,11 @@ export class TodoStorage {
       } else {
         console.log('To access this file on Android:');
         console.log('1. Connect to your device/emulator via ADB');
-        console.log(`2. Run: adb pull /data/data/<your-package-name>/files/${this.PROJECT_EXPORT_DIR}/${targetFilename} ./`);
+        console.log(
+          `2. Run: adb pull /data/data/<your-package-name>/files/${this.PROJECT_EXPORT_DIR}/${targetFilename} ./`
+        );
       }
-      
+
       return targetPath;
     } catch (error) {
       console.error('Failed to copy Realm database:', error);
@@ -169,30 +171,30 @@ export class TodoStorage {
     try {
       // Get all todos
       const todos = await this.getTodos();
-      
+
       // Create a timestamp for the filename
       const timestamp = new Date().getTime();
       const filename = `todos_${timestamp}.json`;
-      
+
       // Get document directory
       const documentDir = FileSystem.documentDirectory;
       if (!documentDir) {
         console.error('Could not determine document directory path');
         return null;
       }
-      
+
       // Create the file path
       const filePath = `${documentDir}${filename}`;
-      
+
       // Write todos to the file
       await FileSystem.writeAsStringAsync(filePath, JSON.stringify(todos, null, 2));
-      
+
       // Log the path for debugging
       console.log(`\n==== EXPORT TODOS INFO ====`);
       console.log(`Todos exported to: ${filePath}`);
       console.log(`Filename: ${filename}`);
       console.log(`============================\n`);
-      
+
       return filePath;
     } catch (error) {
       console.error('Failed to export todos:', error);
@@ -205,19 +207,19 @@ export class TodoStorage {
     try {
       // Get all todos
       const todos = await this.getTodos();
-      
+
       // Create a timestamp for the filename
       const timestamp = new Date().getTime();
       const filename = `todos_${timestamp}.json`;
-      
+
       // Write to a temporary file in the app's document directory
       const tempFile = `${FileSystem.documentDirectory}${filename}`;
       await FileSystem.writeAsStringAsync(tempFile, JSON.stringify(todos, null, 2));
-      
+
       console.log(`Todos exported to temporary file: ${tempFile}`);
-      console.log('To copy this file to your project\'s realm-data directory:');
+      console.log("To copy this file to your project's realm-data directory:");
       console.log('1. Run the following command in your project root:');
-      
+
       if (Platform.OS === 'ios') {
         console.log(`   xcrun simctl pbcopy booted < ${tempFile}`);
         console.log('2. Create a new file in realm-data directory and paste the content');
@@ -225,7 +227,7 @@ export class TodoStorage {
         console.log('   Use adb to pull the file from the device:');
         console.log(`   adb pull ${tempFile} ./realm-data/${filename}`);
       }
-      
+
       return tempFile;
     } catch (error) {
       console.error('Failed to export todos:', error);
@@ -267,8 +269,9 @@ export class TodoStorage {
 
       this.realm = await Realm.open({
         schema: [TodoSchema],
-        schemaVersion: 1,
+        schemaVersion: 5,
         path: realmPath,
+        ...(__DEV__ ? { deleteRealmIfMigrationNeeded: true } : {}),
       });
     }
     return this.realm;
