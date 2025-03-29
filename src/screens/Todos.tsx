@@ -16,6 +16,7 @@ export const Todos: React.FC = () => {
     addTodo,
     editTodo,
     deleteTodo,
+    updateDueDate,
     exportTodosAsJson,
     snackbarProps,
   } = useTodos();
@@ -34,6 +35,7 @@ export const Todos: React.FC = () => {
         onToggleComplete={(taskId: string, completed: boolean) => editTodo(taskId, { completed })}
         onDeleteTask={(taskId: string) => deleteTodo(taskId)}
         onEditTask={(taskId: string, title: string) => editTodo(taskId, { title })}
+        onUpdateDueDate={updateDueDate}
       />
       {__DEV__ && (
         <View style={styles.devTools}>

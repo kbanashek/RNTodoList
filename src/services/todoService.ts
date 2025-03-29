@@ -46,6 +46,9 @@ export class TodoService {
         completed: task.completed,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        dueDate: null,
+        reminderDate: null,
+        reminderEnabled: false,
       }));
 
       // Merge API tasks with local tasks
@@ -82,11 +85,14 @@ export class TodoService {
         completed: false,
         createdAt: now,
         updatedAt: now,
+        dueDate: null,
+        reminderDate: null,
+        reminderEnabled: false,
       };
 
       // Add the new task to Realm
       await TodoStorage.addTodo(newTask);
-      
+
       // Update our local array
       this.tasks = [newTask, ...this.tasks];
 
@@ -107,14 +113,14 @@ export class TodoService {
 
       // Update the task in Realm
       await TodoStorage.updateTodo(taskId, updates);
-      
+
       // Update our local array
       const updatedTask = {
         ...this.tasks[taskIndex],
         ...updates,
         updatedAt: new Date().toISOString(),
       };
-      
+
       this.tasks = [
         ...this.tasks.slice(0, taskIndex),
         updatedTask,
@@ -138,7 +144,7 @@ export class TodoService {
 
       // Delete the task from Realm
       await TodoStorage.deleteTodo(taskId);
-      
+
       // Update our local array
       this.tasks = [...this.tasks.slice(0, taskIndex), ...this.tasks.slice(taskIndex + 1)];
 
@@ -163,7 +169,7 @@ export class TodoService {
       throw error;
     }
   }
-  
+
   public closeDatabase(): void {
     TodoStorage.closeRealm();
   }

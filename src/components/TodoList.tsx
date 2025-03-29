@@ -12,6 +12,7 @@ interface TodoListProps {
   onToggleComplete: (taskId: string, completed: boolean) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask: (taskId: string, title: string) => void;
+  onUpdateDueDate: (taskId: string, dueDate: string | null) => void;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({
@@ -22,12 +23,15 @@ export const TodoList: React.FC<TodoListProps> = ({
   onToggleComplete,
   onDeleteTask,
   onEditTask,
+  onUpdateDueDate,
 }) => {
   if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.centerContainer} testID="loading-container">
         <ActivityIndicator size="large" color="#bb86fc" />
-        <Text style={styles.messageText} testID="loading-text">Loading tasks...</Text>
+        <Text style={styles.messageText} testID="loading-text">
+          Loading tasks...
+        </Text>
       </View>
     );
   }
@@ -35,7 +39,9 @@ export const TodoList: React.FC<TodoListProps> = ({
   if (error) {
     return (
       <View style={styles.centerContainer} testID="error-container">
-        <Text style={[styles.messageText, styles.errorText]} testID="error-text">Error: {error}</Text>
+        <Text style={[styles.messageText, styles.errorText]} testID="error-text">
+          Error: {error}
+        </Text>
       </View>
     );
   }
@@ -43,7 +49,9 @@ export const TodoList: React.FC<TodoListProps> = ({
   if (tasks.length === 0) {
     return (
       <View style={styles.centerContainer} testID="empty-container">
-        <Text style={styles.emptyText} testID="empty-text">No tasks yet. Add one above!</Text>
+        <Text style={styles.emptyText} testID="empty-text">
+          No tasks yet. Add one above!
+        </Text>
       </View>
     );
   }
@@ -60,6 +68,7 @@ export const TodoList: React.FC<TodoListProps> = ({
           onToggleComplete={onToggleComplete}
           onDeleteTask={onDeleteTask}
           onEditTask={onEditTask}
+          onUpdateDueDate={onUpdateDueDate}
         />
       )}
       style={styles.list}

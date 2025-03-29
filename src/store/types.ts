@@ -23,6 +23,9 @@ export interface Todo {
   completed: boolean;
   createdAt: string;
   updatedAt: string;
+  dueDate: string | null;
+  reminderDate: string | null;
+  reminderEnabled: boolean;
 }
 
 export interface TodoServiceConfig {

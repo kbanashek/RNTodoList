@@ -97,6 +97,34 @@ export const useTodos = () => {
     [dispatch]
   );
 
+  const updateDueDate = useCallback(
+    async (taskId: string, dueDate: string | null) => {
+      try {
+        dispatch(addLoadingTaskId(taskId));
+        const result = await todoService.editTask(taskId, { dueDate });
+        dispatch(setTasks([...result.tasks]));
+        dispatch(removeLoadingTaskId(taskId));
+
+        // Show feedback to user
+        if (dueDate) {
+          const formattedDate = new Date(dueDate).toLocaleDateString();
+          setSnackbarMessage(`Due date set to ${formattedDate}`);
+        } else {
+          setSnackbarMessage('Due date cleared');
+        }
+        setSnackbarAction({
+          label: 'OK',
+          onPress: () => setSnackbarVisible(false),
+        });
+        setSnackbarVisible(true);
+      } catch (error) {
+        dispatch(removeLoadingTaskId(taskId));
+        dispatch(setError(error instanceof Error ? error.message : 'Failed to update due date'));
+      }
+    },
+    [dispatch]
+  );
+
   const fetchTasks = useCallback(async () => {
     dispatch(setLoading(true));
     dispatch(setError(null));
@@ -154,6 +182,7 @@ export const useTodos = () => {
     loadTodos,
     fetchTasks,
     exportTodosAsJson,
+    updateDueDate,
     snackbarProps: {
       visible: snackbarVisible,
       onDismiss: () => setSnackbarVisible(false),

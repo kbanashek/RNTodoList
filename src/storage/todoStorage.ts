@@ -11,6 +11,9 @@ class TodoSchema extends Realm.Object<TodoSchema> {
   completed!: boolean;
   createdAt!: string;
   updatedAt!: string;
+  dueDate!: string | null;
+  reminderDate!: string | null;
+  reminderEnabled!: boolean;
 
   static schema = {
     name: 'Todo',
@@ -21,6 +24,9 @@ class TodoSchema extends Realm.Object<TodoSchema> {
       completed: 'bool',
       createdAt: 'string',
       updatedAt: 'string',
+      dueDate: 'string?',
+      reminderDate: 'string?',
+      reminderEnabled: 'bool',
     },
   };
 }
@@ -267,11 +273,46 @@ export class TodoStorage {
         }
       }
 
+      // In development mode, delete the Realm file to avoid migration issues
+      if (__DEV__) {
+        try {
+          const exists = await FileSystem.getInfoAsync(realmPath);
+          if (exists.exists) {
+            await FileSystem.deleteAsync(realmPath);
+            console.log('Deleted existing Realm database to avoid migration issues');
+          }
+        } catch (error) {
+          console.error('Error deleting Realm database:', error);
+        }
+      }
+
       this.realm = await Realm.open({
         schema: [TodoSchema],
-        schemaVersion: 5,
+        schemaVersion: 7,
         path: realmPath,
-        ...(__DEV__ ? { deleteRealmIfMigrationNeeded: true } : {}),
+        onMigration: (oldRealm, newRealm) => {
+          // Handle migration for version 7 (adding reminderEnabled, dueDate, reminderDate)
+          if (oldRealm.schemaVersion < 7) {
+            const oldObjects = oldRealm.objects('Todo');
+            const newObjects = newRealm.objects('Todo');
+
+            // For each object, set default values for new fields if they don't exist
+            for (let i = 0; i < oldObjects.length; i++) {
+              const newObject = newObjects[i];
+
+              // Set default values for new fields
+              if (!newObject.hasOwnProperty('reminderEnabled')) {
+                newObject.reminderEnabled = false;
+              }
+              if (!newObject.hasOwnProperty('dueDate')) {
+                newObject.dueDate = null;
+              }
+              if (!newObject.hasOwnProperty('reminderDate')) {
+                newObject.reminderDate = null;
+              }
+            }
+          }
+        },
       });
     }
     return this.realm;
@@ -289,6 +330,9 @@ export class TodoStorage {
         completed: todo.completed,
         createdAt: todo.createdAt,
         updatedAt: todo.updatedAt,
+        dueDate: todo.dueDate,
+        reminderDate: todo.reminderDate,
+        reminderEnabled: todo.reminderEnabled,
       }));
     } catch (error) {
       console.error('Error getting tasks from Realm:', error);
@@ -311,6 +355,9 @@ export class TodoStorage {
               completed: task.completed,
               createdAt: task.createdAt,
               updatedAt: task.updatedAt,
+              dueDate: task.dueDate,
+              reminderDate: task.reminderDate,
+              reminderEnabled: task.reminderEnabled,
             },
             Realm.UpdateMode.Modified
           ); // Use the proper enum for update mode
@@ -335,6 +382,9 @@ export class TodoStorage {
           existingTodo.title = task.title;
           existingTodo.completed = task.completed;
           existingTodo.updatedAt = task.updatedAt;
+          existingTodo.dueDate = task.dueDate;
+          existingTodo.reminderDate = task.reminderDate;
+          existingTodo.reminderEnabled = task.reminderEnabled;
           console.log(`Updated existing todo with ID ${task.id} instead of creating a new one`);
         } else {
           // Create a new todo
@@ -344,6 +394,9 @@ export class TodoStorage {
             completed: task.completed,
             createdAt: task.createdAt,
             updatedAt: task.updatedAt,
+            dueDate: task.dueDate,
+            reminderDate: task.reminderDate,
+            reminderEnabled: task.reminderEnabled,
           });
         }
       });
@@ -365,6 +418,15 @@ export class TodoStorage {
           }
           if (updates.completed !== undefined) {
             todo.completed = updates.completed;
+          }
+          if (updates.dueDate !== undefined) {
+            todo.dueDate = updates.dueDate;
+          }
+          if (updates.reminderDate !== undefined) {
+            todo.reminderDate = updates.reminderDate;
+          }
+          if (updates.reminderEnabled !== undefined) {
+            todo.reminderEnabled = updates.reminderEnabled;
           }
           todo.updatedAt = new Date().toISOString();
         });
